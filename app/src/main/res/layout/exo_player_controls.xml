@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/exo_controller"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_gravity="bottom"
+    android:orientation="vertical"
+    android:background="#CC000000"
+    android:padding="8dp">
+
+    <!-- BARRA DE TIEMPO -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingBottom="4dp">
+
+        <TextView
+            android:id="@id/exo_position"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:paddingEnd="6dp" />
+
+        <com.google.android.exoplayer2.ui.DefaultTimeBar
+            android:id="@id/exo_progress"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="26dp" />
+
+        <TextView
+            android:id="@id/exo_duration"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:paddingStart="6dp" />
+    </LinearLayout>
+
+    <!-- BOTONES DE CONTROL -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <ImageButton android:id="@id/exo_rew"
+            style="@style/ExoMediaButton.Rewind" />
+
+        <ImageButton android:id="@id/exo_play"
+            style="@style/ExoMediaButton.Play" />
+
+        <ImageButton android:id="@id/exo_pause"
+            style="@style/ExoMediaButton.Pause" />
+
+        <ImageButton android:id="@id/exo_ffwd"
+            style="@style/ExoMediaButton.FastForward" />
+    </LinearLayout>
+
+</LinearLayout>
