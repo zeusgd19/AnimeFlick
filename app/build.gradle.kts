@@ -3,6 +3,7 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("kotlin-kapt")
     id("com.google.protobuf") version "0.9.4"
+    id("org.jetbrains.kotlin.plugin.serialization") version "1.9.0"
 }
 
 
@@ -28,7 +29,7 @@ android {
         minSdk = 24
         targetSdk = 35
         versionCode = 1
-        versionName = "1.0"
+        versionName = "1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -66,6 +67,11 @@ android {
 }
 
 dependencies {
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+    implementation("io.ktor:ktor-client-core:2.3.4")
+    implementation("io.ktor:ktor-client-okhttp:2.3.4")
+    implementation("io.ktor:ktor-client-content-negotiation:2.3.4")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.4")
     implementation("androidx.compose.ui:ui:1.5.0")
     implementation("androidx.activity:activity-compose:1.7.2")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.1")
@@ -80,11 +86,13 @@ dependencies {
     implementation("androidx.datastore:datastore-core:1.0.0")
     implementation("com.google.accompanist:accompanist-swiperefresh:0.30.1")
     implementation("com.google.protobuf:protobuf-java:3.25.1")
+    implementation("org.apache.commons:commons-text:1.10.0")
     implementation(libs.androidx.material3.android)
     implementation(libs.ads.mobile.sdk)
     implementation(libs.androidx.appcompat)
     implementation("io.coil-kt:coil-compose:2.4.0")
     implementation(libs.volley)
+    implementation(libs.firebase.crashlytics.buildtools)
     testImplementation("org.testng:testng:6.9.6")
     kapt("androidx.room:room-compiler:2.5.2")
     implementation("androidx.core:core-ktx:1.10.1")

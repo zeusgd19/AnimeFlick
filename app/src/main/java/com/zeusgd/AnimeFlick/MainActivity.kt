@@ -1,6 +1,7 @@
 package com.zeusgd.AnimeFlick
 
 import android.os.Build
+import android.os.Build.VERSION_CODES.TIRAMISU
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.addCallback
@@ -15,7 +16,7 @@ import com.zeusgd.AnimeFlick.ui.theme.MainAnimeScreen
 class MainActivity : ComponentActivity() {
     private val viewModel by viewModels<AnimeViewModel>()
 
-    @RequiresApi(Build.VERSION_CODES.O)
+    @RequiresApi(TIRAMISU)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 

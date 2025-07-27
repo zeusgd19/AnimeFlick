@@ -98,7 +98,7 @@ fun AnimeDetailScreen(
 
         HorizontalPager(state = pagerState, modifier = Modifier.weight(1f)) { page ->
             when (page) {
-                0 -> AnimeInfoTab(animeInfo)
+                0 -> AnimeInfoTab(context,animeInfo)
                 1 -> EpisodeTab(viewModel)
             }
         }

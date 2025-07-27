@@ -9,9 +9,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import okhttp3.ConnectionSpec
+import okhttp3.Headers
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import org.apache.commons.text.StringEscapeUtils
+import org.json.JSONObject
 import org.jsoup.Jsoup
+import org.jsoup.helper.HttpConnection
 
 object VideoExtractor {
 
@@ -118,6 +122,76 @@ object VideoExtractor {
                 return@withContext null
             }
         }
+
+    suspend fun extractOkruVideo(baseLink: String): List<Option> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val downLink = PatternUtil.extractLink(baseLink) // Tu función que obtiene el enlace directo
+                val doc = Jsoup.connect(downLink)
+                    .userAgent(HttpConnection.DEFAULT_UA)
+                    .get()
+
+                val html = doc.html()
+
+                val (source) = Regex("data-options=\"(.*?)\"").find(html)?.destructured
+                    ?: throw IllegalStateException("No se encontró el atributo data-options")
+
+                val jsonText = StringEscapeUtils.unescapeHtml4(source)
+
+                val videosJson = JSONObject(
+                    JSONObject(jsonText)
+                        .getJSONObject("flashvars")
+                        .getString("metadata")
+                ).getJSONArray("videos")
+
+                val options = mutableListOf<Option>()
+
+                for (i in 0 until videosJson.length()) {
+                    val video = videosJson.getJSONObject(i)
+                    val url = video.getString("url")
+                    val name = when (video.getString("name")) {
+                        "mobile" -> "144p"
+                        "lowest" -> "240p"
+                        "low" -> "360p"
+                        "sd" -> "480p"
+                        "hd" -> "720p"
+                        "full" -> "1080p"
+                        "quad" -> "2000p"
+                        "ultra" -> "4000p"
+                        else -> "Default"
+                    }
+
+                    val headers = mapOf(
+                        "User-Agent" to HttpConnection.DEFAULT_UA,
+                    )
+
+                    options.add(
+                        Option(
+                            name = "Okru",
+                            quality = name,
+                            url = url,
+                            headers = headers
+                        )
+                    )
+                }
+
+                if (options.isEmpty()) throw Exception("No se encontraron calidades")
+
+                options
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+                emptyList()
+            }
+        }
+    }
+
+    data class Option(
+        val name: String,              // Nombre del servidor o del anime
+        val quality: String,           // Ej: "480p", "720p"
+        val url: String,               // Enlace al vídeo
+        val headers: Map<String, String> = emptyMap() // Cabeceras opcionales
+    )
 
     suspend fun extract(server: String, embedUrl: String, context: Context): Pair<String, Map<String, String>>? {
         return when (server.lowercase()) {

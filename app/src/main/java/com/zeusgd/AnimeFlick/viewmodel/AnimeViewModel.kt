@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
@@ -54,6 +55,9 @@ class AnimeViewModel(
     val animeMap: Map<String, SnapshotStateList<AnimeSearched>> = _animeMap
     private val pageMap = mutableMapOf<String, Int>()
     private val isLoadingMap = mutableMapOf<String, Boolean>()
+
+    private val _videoOptions = mutableStateOf<List<VideoExtractor.Option>?>(null)
+    val videoOptions: State<List<VideoExtractor.Option>?> = _videoOptions
 
     var isLoadingEpisode by mutableStateOf(false)
         private set
@@ -213,6 +217,15 @@ class AnimeViewModel(
         }
     }
 
+    fun unmarkEpisodeSeen(context: Context, slug: String){
+        viewModelScope.launch {
+            context.seenEpisodesDataStore.updateData { current ->
+                val updated = current.episodeSlugsList.filterNot { it == slug }
+                SeenEpisodes.newBuilder().addAllEpisodeSlugs(updated).build()
+            }
+        }
+    }
+
     fun isEpisodeSeenFlow(context: Context): Flow<Set<String>> {
         return context.seenEpisodesDataStore.data
             .map { it.episodeSlugsList.toSet() }
@@ -252,6 +265,10 @@ class AnimeViewModel(
         }
     }
 
+    fun clearVideoOptions() {
+        _videoOptions.value = null
+    }
+
     suspend fun getEmbedPlayerEpisode(slug: String): List<Server> {
         return try {
             val response = api.getEmbedPlayer(slug)
@@ -270,8 +287,14 @@ class AnimeViewModel(
             try {
                 val servers = getEmbedPlayerEpisode(episodeSlug)
                 val embedUrl = servers.find { it.name.equals(server, ignoreCase = true) }?.embed
-
                 if (embedUrl.isNullOrEmpty()) throw Exception("No se encontró el servidor '$server'")
+
+                if (server.equals("okru", ignoreCase = true)) {
+                    val options = VideoExtractor.extractOkruVideo(embedUrl)
+                    if (options.isEmpty()) throw Exception("No se pudo extraer el enlace de Okru")
+                    _videoOptions.value = options
+                    return@launch
+                }
 
                 val mp4 = VideoExtractor.extract(server, embedUrl, context)
                 if (mp4 == null) throw Exception("No se pudo extraer el enlace del vídeo")

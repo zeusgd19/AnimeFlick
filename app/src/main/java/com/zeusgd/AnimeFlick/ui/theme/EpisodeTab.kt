@@ -1,5 +1,6 @@
 package com.zeusgd.AnimeFlick.ui.theme
 
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -37,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.zeusgd.AnimeFlick.VideoPlayerActivity
 import com.zeusgd.AnimeFlick.viewmodel.AnimeViewModel
 
 @Composable
@@ -89,8 +91,12 @@ fun EpisodeTab(viewModel: AnimeViewModel) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable(enabled = !viewModel.isLoadingEpisode) {
-                                viewModel.onEpisodeSelected(episode)
-                                viewModel.markEpisodeSeen(context, episode.slug)
+                                if(!isSeen) {
+                                    viewModel.onEpisodeSelected(episode)
+                                    viewModel.markEpisodeSeen(context, episode.slug)
+                                } else {
+                                    viewModel.unmarkEpisodeSeen(context, episode.slug)
+                                }
                             }
                             .padding(vertical = 12.dp, horizontal = 12.dp),
                         contentAlignment = Alignment.TopStart
@@ -144,6 +150,44 @@ fun EpisodeTab(viewModel: AnimeViewModel) {
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text("Stape")
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            Button(
+                                onClick = {
+                                    viewModel.clearSelectedEpisode()
+                                    viewModel.onEpisodeClick(context, episode.slug, "Okru") // <--- NUEVO
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Okru")
+                            }
+                        }
+                    }
+                )
+            }
+            viewModel.videoOptions.value?.let { options ->
+                AlertDialog(
+                    onDismissRequest = { viewModel.clearVideoOptions() },
+                    confirmButton = {},
+                    title = { Text("Elige calidad") },
+                    text = {
+                        Column {
+                            options.forEach { option ->
+                                Button(
+                                    onClick = {
+                                        viewModel.clearVideoOptions()
+                                        val intent = Intent(context, VideoPlayerActivity::class.java).apply {
+                                            putExtra("videoUrl", option.url)
+                                            putExtra("headers", HashMap(option.headers))
+                                        }
+                                        context.startActivity(intent)
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp)
+                                ) {
+                                    Text(text = option.quality)
+                                }
                             }
                         }
                     }
