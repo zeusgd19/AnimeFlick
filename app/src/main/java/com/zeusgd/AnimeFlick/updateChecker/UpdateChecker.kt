@@ -10,6 +10,9 @@ import android.os.Build.VERSION_CODES.TIRAMISU
 import android.os.Environment
 import android.widget.Toast
 import androidx.annotation.RequiresApi
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.okhttp.*
@@ -29,15 +32,22 @@ data class GitHubAsset(
 @Serializable
 data class GitHubRelease(
     @SerialName("tag_name") val tag: String,
+    val body: String,
     val assets: List<GitHubAsset>
 )
 
+
+var updatedInfo by mutableStateOf("");
 fun getInstalledVersion(context: Context): String? {
     return try {
         context.packageManager.getPackageInfo(context.packageName, 0).versionName
     } catch (e: PackageManager.NameNotFoundException) {
         "0.0.0"
     }
+}
+
+suspend fun getUpdatedInfo(): String {
+    return updatedInfo
 }
 
 suspend fun checkForUpdateFromGitHub(context: Context): String? {
@@ -49,6 +59,8 @@ suspend fun checkForUpdateFromGitHub(context: Context): String? {
 
     val response = client.get("https://api.github.com/repos/zeusgd19/AnimeFlick/releases/latest")
     val release = response.body<GitHubRelease>()
+
+    updatedInfo = release.body;
 
     val currentVersion = getInstalledVersion(context)
     val remoteVersion = release.tag.removePrefix("v")

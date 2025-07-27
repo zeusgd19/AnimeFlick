@@ -36,6 +36,8 @@ import checkForUpdateFromGitHub
 import com.zeusgd.AnimeFlick.Screen
 import com.zeusgd.AnimeFlick.viewmodel.AnimeViewModel
 import downloadAndInstall
+import getUpdatedInfo
+import updatedInfo
 
 @RequiresApi(TIRAMISU)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -46,11 +48,14 @@ fun MainAnimeScreen(context: Context,viewModel: AnimeViewModel) {
     var searchQuery by remember { mutableStateOf("") }
 
     var apkUrl by remember { mutableStateOf<String?>(null) }
+    var info by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         val url = checkForUpdateFromGitHub(context)
+        val updatedInfo = getUpdatedInfo()
         if (url != null) {
             apkUrl = url
+            info = updatedInfo
         }
     }
 
@@ -58,7 +63,21 @@ fun MainAnimeScreen(context: Context,viewModel: AnimeViewModel) {
         AlertDialog(
             onDismissRequest = { apkUrl = null },
             title = { Text("Actualización disponible") },
-            text = { Text("¿Quieres actualizar la app ahora?") },
+            text = {
+                Column {
+                    Text("¿Quieres actualizar la app ahora?")
+                    Spacer(Modifier.height(8.dp))
+                    Text("Novedades:", style = MaterialTheme.typography.labelMedium)
+                    Spacer(Modifier.height(4.dp))
+                    info?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
+                }
+            },
             confirmButton = {
                 TextButton(onClick = {
                     downloadAndInstall(context, apkUrl!!) // Usa la función que ya tienes
