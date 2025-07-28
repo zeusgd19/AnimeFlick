@@ -12,5 +12,5 @@ como:
 
 Es una app por y para fans.
 
-Me gustaria mencionar a [Ukiku](https://github.com/jordyamc/UKIKU) ya que se ha utilizado su codigo para obtener los enlaces de los servidores anteriormente mencionados para poder reproducir el contenido.
+Me gustaria mencionar a [Ukiku](https://github.com/jordyamc/UKIKU) ya que se ha utilizado su codigo para obtener los enlaces de servidores como StreamWish, YourUpload, etc... para poder acceder al contenido
 
