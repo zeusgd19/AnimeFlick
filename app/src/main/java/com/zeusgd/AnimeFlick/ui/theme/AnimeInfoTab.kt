@@ -1,6 +1,8 @@
 package com.zeusgd.AnimeFlick.ui.theme
 
+import android.annotation.SuppressLint
 import android.content.Context
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -17,16 +19,27 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.zeusgd.AnimeFlick.model.Anime
+import com.zeusgd.AnimeFlick.viewmodel.AnimeViewModel
 
+@SuppressLint("UnrememberedMutableState")
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun AnimeInfoTab(context: Context,anime: Anime) {
+fun AnimeInfoTab(context: Context,anime: Anime, viewModel: AnimeViewModel) {
+
+    var sinopsisTraducida by remember { mutableStateOf(anime.synopsis) }
+
     Column(modifier = Modifier
         .verticalScroll(rememberScrollState())
         .padding(16.dp)) {
@@ -77,6 +90,13 @@ fun AnimeInfoTab(context: Context,anime: Anime) {
         Spacer(modifier = Modifier.height(16.dp))
         Text("Sinopsis", style = MaterialTheme.typography.titleMedium)
         Spacer(modifier = Modifier.height(4.dp))
-        Text(anime.synopsis, style = MaterialTheme.typography.bodyMedium)
+
+        val locale = context.resources.configuration.locales[0]
+        if(locale.language != "es"){
+            LaunchedEffect(anime.title, locale.language) {
+                sinopsisTraducida = viewModel.translateSinopsis(anime.synopsis, locale.language)
+            }
+        }
+        Text(sinopsisTraducida, style = MaterialTheme.typography.bodyMedium)
     }
 }

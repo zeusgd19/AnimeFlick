@@ -28,10 +28,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.zeusgd.AnimeFlick.FavoriteAnime
+import com.zeusgd.AnimeFlick.R
 import com.zeusgd.AnimeFlick.model.AnimeSearched
 import com.zeusgd.AnimeFlick.viewmodel.AnimeViewModel
 
@@ -58,7 +60,7 @@ fun FavoritosScreen(viewModel: AnimeViewModel) {
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("Todavía no tienes animes favoritos 😢", style = MaterialTheme.typography.bodyLarge)
+                    Text(text = stringResource(R.string.no_favorite), style = MaterialTheme.typography.bodyLarge)
                 }
             } else {
                 LazyColumn(

@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zeusgd.AnimeFlick.Screen
+import com.zeusgd.AnimeFlick.getLabel
 
 @Composable
 fun AnimeBottomBar(
@@ -51,7 +52,7 @@ fun AnimeBottomBar(
                 },
                 label = {
                     Text(
-                        text = screen.name,
+                        text = screen.getLabel(),
                         fontSize = 11.sp
                     )
                 },

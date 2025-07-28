@@ -31,9 +31,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import checkForUpdateFromGitHub
+import com.zeusgd.AnimeFlick.R
 import com.zeusgd.AnimeFlick.Screen
+import com.zeusgd.AnimeFlick.getLabel
 import com.zeusgd.AnimeFlick.viewmodel.AnimeViewModel
 import downloadAndInstall
 import getUpdatedInfo
@@ -107,11 +110,11 @@ fun MainAnimeScreen(context: Context,viewModel: AnimeViewModel) {
                                     viewModel.search(it)
                                 },
                                 modifier = Modifier.fillMaxWidth(),
-                                placeholder = { Text("Buscar anime") },
+                                placeholder = { Text(text = stringResource(R.string.search)) },
                                 singleLine = true
                             )
                         } else {
-                            Text(screen.name)
+                            Text(screen.getLabel())
                         }
                     },
                     actions = {

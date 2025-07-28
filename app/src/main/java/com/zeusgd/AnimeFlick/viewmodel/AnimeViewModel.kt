@@ -23,6 +23,7 @@ import com.zeusgd.AnimeFlick.network.AnimeApiService
 import com.zeusgd.AnimeFlick.network.RetrofitInstance
 import com.zeusgd.AnimeFlick.network.RetrofitInstance.api
 import com.zeusgd.AnimeFlick.network.RetrofitInstance.apiVercel
+import com.zeusgd.AnimeFlick.network.RetrofitInstance.translateApi
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import okhttp3.OkHttpClient
@@ -262,6 +263,18 @@ class AnimeViewModel(
             } catch (e: Exception) {
                 e.printStackTrace()
             }
+        }
+    }
+
+    suspend fun translateSinopsis(texto: String, destino: String): String {
+        return try {
+            val respuesta = translateApi.translate(
+                TranslateRequest(q = texto, source = "", target = destino)
+            )
+            respuesta.content.translation
+        } catch (e: Exception) {
+            e.printStackTrace()
+            texto
         }
     }
 

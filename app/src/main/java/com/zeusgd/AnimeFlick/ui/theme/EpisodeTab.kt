@@ -37,9 +37,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.zeusgd.AnimeFlick.R
 import com.zeusgd.AnimeFlick.VideoPlayerActivity
 import com.zeusgd.AnimeFlick.viewmodel.AnimeViewModel
+import java.util.Locale
 
 @Composable
 fun EpisodeTab(viewModel: AnimeViewModel) {
@@ -102,7 +105,7 @@ fun EpisodeTab(viewModel: AnimeViewModel) {
                         contentAlignment = Alignment.TopStart
                     ) {
                         Text(
-                            text = "Episodio ${episode.number}",
+                            text = stringResource(R.string.episode).lowercase(Locale.ROOT).replaceFirstChar { it.uppercaseChar() } + " " + episode.number,
                             style = MaterialTheme.typography.bodyLarge,
                             color = if (isSeen) Color.Red else MaterialTheme.colorScheme.onBackground
                         )

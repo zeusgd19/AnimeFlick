@@ -1,5 +1,6 @@
 package com.zeusgd.AnimeFlick.network
 
+import com.zeusgd.AnimeFlick.LibreTranslateApi
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
@@ -22,6 +23,13 @@ object RetrofitInstance {
             .build()
             .create(AnimeApiService::class.java)
     }
+
+    val translateApi = Retrofit.Builder()
+        .baseUrl("https://webapi.laratranslate.com/") // o tu instancia si montas una
+        .addConverterFactory(GsonConverterFactory.create())
+        .build()
+        .create(LibreTranslateApi::class.java)
+
 
 
 }

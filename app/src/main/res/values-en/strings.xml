@@ -1,0 +1,18 @@
+<resources>
+    <string name="app_name">AnimeFlick</string>
+
+    <string name="theme">Dark Theme</string>
+    <string name="language">Language</string>
+
+    <string name="episode">EPISODE</string>
+
+    <string name="no_favorite">You don\'t have any favorite animes yet 😢</string>
+
+    <string name="search">Search Anime</string>
+
+    <string name="recents">Recents</string>
+    <string name="favorite">Favorites</string>
+    <string name="explorer">Explore</string>
+    <string name="season">Season</string>
+    <string name="settings">Settings</string>
+</resources>

@@ -2,6 +2,7 @@ package com.zeusgd.AnimeFlick.ui.theme
 
 import android.content.Context
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.clickable
@@ -27,6 +28,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.zeusgd.AnimeFlick.model.Anime
 import com.zeusgd.AnimeFlick.model.AnimeSearched
 import com.zeusgd.AnimeFlick.viewmodel.AnimeViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -71,9 +73,18 @@ fun TemporadaTab(context: Context, viewModel: AnimeViewModel, onAnimeClick: (Ani
                             .fillMaxWidth()
                             .clickable {
                                 CoroutineScope(Dispatchers.Main).launch {
-                                    val result = viewModel.searchDirect(airing.slug)
+                                    val result = viewModel.searchDirect(airing.title.replace("Anime", "").trim())
+
                                     if (result.isNotEmpty()) {
-                                        onAnimeClick(result.first())
+                                        if(result.size > 1){
+                                            val newResult = result.filter {
+                                                animeSearched ->
+                                                animeSearched.slug == airing.slug
+                                            }.first()
+                                            onAnimeClick(newResult)
+                                        } else {
+                                            onAnimeClick(result.first())
+                                        }
                                     }
                                 }
                             }

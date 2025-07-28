@@ -70,7 +70,15 @@ fun RecientesScreen(
                             CoroutineScope(Dispatchers.Main).launch {
                                 val results = viewModel.searchDirect(episode.title.replace(" ", "%20"))
                                 if (results.isNotEmpty()) {
-                                    onAnimeClick(results.first())
+                                    if(results.size > 1){
+                                        val newResult = results.filter {
+                                                animeSearched ->
+                                            animeSearched.title == episode.title
+                                        }.first()
+                                        onAnimeClick(newResult)
+                                    } else {
+                                        onAnimeClick(results.first())
+                                    }
                                 } else {
                                     Toast.makeText(context, "No se encontró el anime", Toast.LENGTH_SHORT).show()
                                 }
