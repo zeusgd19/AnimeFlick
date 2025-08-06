@@ -164,6 +164,16 @@ fun EpisodeTab(viewModel: AnimeViewModel) {
                             ) {
                                 Text("Okru")
                             }
+                            Spacer(Modifier.height(8.dp))
+                            Button(
+                                onClick = {
+                                    viewModel.clearSelectedEpisode()
+                                    viewModel.onEpisodeClick(context, episode.slug, "SW") // <--- NUEVO
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("StreamWish")
+                            }
                         }
                     }
                 )

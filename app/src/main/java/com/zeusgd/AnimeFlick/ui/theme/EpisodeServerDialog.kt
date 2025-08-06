@@ -23,7 +23,7 @@ fun EpisodeServerDialog(
         title = { Text("Elegir servidor") },
         text = {
             Column {
-                listOf("YourUpload", "Stape").forEach { server ->
+                listOf("YourUpload", "Stape", "Okru", "SW").forEach { server ->
                     Button(
                         onClick = { onSelect(server) },
                         modifier = Modifier

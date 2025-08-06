@@ -3,10 +3,15 @@ package com.zeusgd.AnimeFlick
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
+import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.exoplayer2.ExoPlayer
 import com.google.android.exoplayer2.MediaItem
+import com.google.android.exoplayer2.source.ProgressiveMediaSource
+import com.google.android.exoplayer2.source.hls.HlsMediaSource
 import com.google.android.exoplayer2.ui.PlayerView
+import com.google.android.exoplayer2.upstream.DefaultHttpDataSource
+import com.google.android.exoplayer2.util.MimeTypes
 
 class VideoPlayerActivity : AppCompatActivity() {
 
@@ -18,6 +23,7 @@ class VideoPlayerActivity : AppCompatActivity() {
         setContentView(R.layout.activity_video_player)
 
         window.statusBarColor = android.graphics.Color.TRANSPARENT
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         playerView = findViewById(R.id.player_view)
 
         player = ExoPlayer.Builder(this).build()
@@ -28,17 +34,22 @@ class VideoPlayerActivity : AppCompatActivity() {
         val headers = intent.getSerializableExtra("headers") as? HashMap<String, String> ?: hashMapOf()
 
         if (videoUrl != null) {
+            val isHls = videoUrl.contains(".m3u8") || videoUrl.contains("urlset") // puedes afinar este check
+
             val mediaItem = MediaItem.Builder()
                 .setUri(Uri.parse(videoUrl))
-                .setCustomCacheKey("anime_stream")
-                .setTag("streamwish")
+                .setMimeType(if (isHls) MimeTypes.APPLICATION_M3U8 else MimeTypes.APPLICATION_MP4)
                 .build()
 
-            val mediaSource = com.google.android.exoplayer2.source.ProgressiveMediaSource.Factory(
-                com.google.android.exoplayer2.upstream.DefaultHttpDataSource.Factory().apply {
-                    setDefaultRequestProperties(headers)
-                }
-            ).createMediaSource(mediaItem)
+            val dataSourceFactory = DefaultHttpDataSource.Factory().apply {
+                setDefaultRequestProperties(headers)
+            }
+
+            val mediaSource = if (isHls) {
+                HlsMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem)
+            } else {
+                ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem)
+            }
 
             player.setMediaSource(mediaSource)
             player.prepare()

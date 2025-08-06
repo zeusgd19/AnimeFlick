@@ -24,6 +24,7 @@ import com.zeusgd.AnimeFlick.network.RetrofitInstance
 import com.zeusgd.AnimeFlick.network.RetrofitInstance.api
 import com.zeusgd.AnimeFlick.network.RetrofitInstance.apiVercel
 import com.zeusgd.AnimeFlick.network.RetrofitInstance.translateApi
+import getAiringAnimesGroupedByWeekday
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import okhttp3.OkHttpClient
@@ -51,6 +52,8 @@ class AnimeViewModel(
 
     var recentEpisodes = mutableStateListOf<RecentEpisode>()
     var airingAnimeByDay by mutableStateOf<Map<String, List<AiringAnime>>>(emptyMap())
+    var isLoadingTemporada by mutableStateOf(false)
+        private set
 
     private val _animeMap = mutableStateMapOf<String, SnapshotStateList<AnimeSearched>>()
     val animeMap: Map<String, SnapshotStateList<AnimeSearched>> = _animeMap
@@ -96,11 +99,15 @@ class AnimeViewModel(
     private suspend fun loadDeferredContent() {
         try {
             if (airingAnimeByDay.isEmpty()) {
-                val result = apiVercel.getGroupedAiringAnimes()
+                isLoadingTemporada = true
+                val result = getAiringAnimesGroupedByWeekday()
                 airingAnimeByDay = result.mapKeys { it.key.replaceFirstChar(Char::uppercase) }
             }
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+        finally {
+            isLoadingTemporada = false
         }
     }
 

@@ -186,6 +186,21 @@ object VideoExtractor {
         }
     }
 
+    suspend fun extractStreamWishVideo(url: String, context: Context): Pair<String, Map<String, String>>? {
+        return try {
+            val downLink = PatternUtil.extractLink(url) ?: return null
+            val unpack = Unpacker.unpackWeb(context, downLink)
+            val option = """(?:hls\d"|file): ?"((http[^\"]+m3u8[^\"]*))""".toRegex().findAll(unpack).first()
+            val (link) = option.destructured
+
+            // Sin headers personalizados, igual que Ukiku
+            Pair(link, emptyMap())
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
     data class Option(
         val name: String,              // Nombre del servidor o del anime
         val quality: String,           // Ej: "480p", "720p"
@@ -197,6 +212,7 @@ object VideoExtractor {
         return when (server.lowercase()) {
             "yourupload" -> extractYourUploadVideo(embedUrl, context)
             "stape" -> extractStapeVideo(embedUrl, context)
+            "sw" -> extractStreamWishVideo(embedUrl, context)
             else -> null
         }
     }

@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
@@ -60,53 +62,63 @@ fun TemporadaTab(context: Context, viewModel: AnimeViewModel, onAnimeClick: (Ani
         }
 
         Crossfade(targetState = selectedDay, label = "day-crossfade") { day ->
-            val animes = airingMap[day].orEmpty()
+            if (viewModel.isLoadingTemporada) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else {
+                val animes = airingMap[day].orEmpty()
 
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(8.dp)
-            ) {
-                items(animes) { airing ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                CoroutineScope(Dispatchers.Main).launch {
-                                    val result = viewModel.searchDirect(airing.title.replace("Anime", "").trim())
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(8.dp)
+                ) {
+                    items(animes) { airing ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    CoroutineScope(Dispatchers.Main).launch {
+                                        val result = viewModel.searchDirect(
+                                            airing.title.replace("Anime", "").trim()
+                                        )
 
-                                    if (result.isNotEmpty()) {
-                                        if(result.size > 1){
-                                            val newResult = result.filter {
-                                                animeSearched ->
-                                                animeSearched.slug == airing.slug
-                                            }.first()
-                                            onAnimeClick(newResult)
-                                        } else {
-                                            onAnimeClick(result.first())
+                                        if (result.isNotEmpty()) {
+                                            if (result.size > 1) {
+                                                val newResult = result.filter { animeSearched ->
+                                                    animeSearched.slug == airing.slug
+                                                }.first()
+                                                onAnimeClick(newResult)
+                                            } else {
+                                                onAnimeClick(result.first())
+                                            }
                                         }
                                     }
                                 }
-                            }
-                            .padding(vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(context)
-                                .data(airing.cover)
-                                .crossfade(true)
-                                .build(),
-                            contentDescription = airing.title,
-                            modifier = Modifier
-                                .size(72.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = airing.title,
-                            style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.weight(1f)
-                        )
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context)
+                                    .data(airing.cover)
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = airing.title,
+                                modifier = Modifier
+                                    .size(72.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = airing.title,
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
                 }
             }
