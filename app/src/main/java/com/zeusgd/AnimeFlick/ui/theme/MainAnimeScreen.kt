@@ -5,41 +5,64 @@ import android.os.Build
 import android.os.Build.VERSION_CODES.TIRAMISU
 import android.widget.Toast
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import checkForUpdateFromGitHub
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.zeusgd.AnimeFlick.R
 import com.zeusgd.AnimeFlick.Screen
 import com.zeusgd.AnimeFlick.getLabel
 import com.zeusgd.AnimeFlick.viewmodel.AnimeViewModel
 import downloadAndInstall
 import getUpdatedInfo
+import kotlinx.coroutines.launch
 import updatedInfo
 
 @RequiresApi(TIRAMISU)
@@ -52,6 +75,10 @@ fun MainAnimeScreen(context: Context,viewModel: AnimeViewModel) {
 
     var apkUrl by remember { mutableStateOf<String?>(null) }
     var info by remember { mutableStateOf<String?>(null) }
+
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+    var showMyAnimes by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         val url = checkForUpdateFromGitHub(context)
@@ -97,79 +124,130 @@ fun MainAnimeScreen(context: Context,viewModel: AnimeViewModel) {
         )
     }
 
-    Scaffold(
-        topBar = {
-            if (screen != Screen.Ajustes && viewModel.selectedAnime == null) {
-                TopAppBar(
-                    title = {
-                        if (isSearching) {
-                            OutlinedTextField(
-                                value = searchQuery,
-                                onValueChange = {
-                                    searchQuery = it
-                                    viewModel.search(it)
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                                placeholder = { Text(text = stringResource(R.string.search)) },
-                                singleLine = true
-                            )
-                        } else {
-                            Text(screen.getLabel())
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        scrimColor = Color.Transparent,
+        drawerContent = {
+            ModalDrawerSheet(
+                modifier = Modifier
+                    .width(300.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .background(Color.Blue)
+                        .height(150.dp)
+                ){
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(R.drawable.logo_a)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(140.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .align(Alignment.Center)
+                    )
+                }
+                NavigationDrawerItem(
+                    icon = { Icon(Icons.Default.Star, "Mis Animes") },
+                    label = { Text("Mis Animes") },
+                    selected = false,
+                    onClick = {
+                        scope.launch { drawerState.close()
+                            viewModel.navigateTo(Screen.MisAnime)
                         }
                     },
-                    actions = {
-                        IconButton(onClick = {
-                            isSearching = !isSearching
-                            if (!isSearching) {
-                                searchQuery = ""
-                                viewModel.search("")
-                            }
-                        }) {
-                            Icon(
-                                imageVector = Icons.Default.Search,
-                                contentDescription = "Buscar"
-                            )
-                        }
-                    }
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                 )
-            }
-        },
-        bottomBar = {
-            if (viewModel.selectedAnime == null) {
-                AnimeBottomBar(currentScreen = screen, onScreenSelected = {
-                    viewModel.navigateTo(it)
-                    searchQuery = ""
-                    viewModel.search("")
-                })
             }
         }
-    ) { innerPadding ->
-        Box(modifier = Modifier.padding(innerPadding)) {
-            if (viewModel.selectedAnime != null) {
-                AnimeDetailScreen(
-                    context,
-                    anime = viewModel.selectedAnime!!,
-                    animeInfo = viewModel.animeInfo!!,
-                    onBack = {
-                        viewModel.animeInfo = null
-                        viewModel.selectedAnime = null
-                    },
-                    viewModel = viewModel
-                )
-            } else {
-                if (isSearching && searchQuery.isNotBlank()) {
-                    BuscarScreen(context,viewModel)
+    ) {
+        Scaffold(
+            topBar = {
+                if (screen != Screen.Ajustes && viewModel.selectedAnime == null) {
+                    TopAppBar(
+                        title = {
+                            if (isSearching) {
+                                OutlinedTextField(
+                                    value = searchQuery,
+                                    onValueChange = {
+                                        searchQuery = it
+                                        viewModel.search(it)
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    placeholder = { Text(text = stringResource(R.string.search)) },
+                                    singleLine = true
+                                )
+                            } else {
+                                Text(text = screen.name)
+                            }
+                        },
+                        actions = {
+                            IconButton(onClick = {
+                                isSearching = !isSearching
+                                if (!isSearching) {
+                                    searchQuery = ""
+                                    viewModel.search("")
+                                }
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Default.Search,
+                                    contentDescription = "Buscar"
+                                )
+                            }
+                        },
+                        navigationIcon = {
+                            IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                                Icon(
+                                    imageVector = Icons.Default.Menu,
+                                    contentDescription = "Menú",
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    )
+                }
+            },
+            bottomBar = {
+                if (viewModel.selectedAnime == null) {
+                    AnimeBottomBar(currentScreen = screen, onScreenSelected = {
+                        viewModel.navigateTo(it)
+                        searchQuery = ""
+                        viewModel.search("")
+                    })
+                }
+            }
+        ) { innerPadding ->
+            Box(modifier = Modifier.padding(innerPadding)) {
+                if (viewModel.selectedAnime != null) {
+                    AnimeDetailScreen(
+                        context,
+                        anime = viewModel.selectedAnime!!,
+                        animeInfo = viewModel.animeInfo!!,
+                        onBack = {
+                            viewModel.animeInfo = null
+                            viewModel.selectedAnime = null
+                        },
+                        viewModel = viewModel
+                    )
                 } else {
-                    when (screen) {
-                        Screen.Recientes -> RecientesScreen(viewModel) { animeSearched ->
-                            viewModel.loadEpisodes(animeSearched)
+                    if (isSearching && searchQuery.isNotBlank()) {
+                        BuscarScreen(context,viewModel)
+                    } else {
+                        when (screen) {
+                            Screen.Recientes -> RecientesScreen(viewModel) { animeSearched ->
+                                viewModel.loadEpisodes(animeSearched)
+                            }
+                            Screen.Favoritos -> FavoritosScreen(viewModel)
+                            Screen.Explorar -> DirectorioScreen(context, viewModel)
+                            Screen.Temporada -> TemporadaTab(context,viewModel) { animeSearched ->
+                                viewModel.loadEpisodes(animeSearched)
+                            }
+                            Screen.Ajustes -> AjustesScreen()
+                            Screen.MisAnime -> MyAnimeScreen(context, viewModel)
                         }
-                        Screen.Favoritos -> FavoritosScreen(viewModel)
-                        Screen.Explorar -> DirectorioScreen(context, viewModel)
-                        Screen.Temporada -> TemporadaTab(context,viewModel) { animeSearched ->
-                            viewModel.loadEpisodes(animeSearched)
-                        }
-                        Screen.Ajustes -> AjustesScreen()
                     }
                 }
             }

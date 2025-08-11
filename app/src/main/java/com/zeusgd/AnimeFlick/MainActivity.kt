@@ -57,7 +57,8 @@ enum class Screen {
     Favoritos,
     Explorar,
     Temporada,
-    Ajustes
+    Ajustes,
+    MisAnime
 }
 
 @Composable
@@ -68,5 +69,6 @@ fun Screen.getLabel(): String {
         Screen.Explorar -> stringResource(R.string.explorer)
         Screen.Temporada -> stringResource(R.string.season)
         Screen.Ajustes -> stringResource(R.string.settings)
+        Screen.MisAnime -> "Mis Animes"
     }
 }

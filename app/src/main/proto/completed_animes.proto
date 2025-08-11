@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+option java_package = "com.zeusgd.AnimeFlick";
+option java_multiple_files = true;
+
+message CompletedAnime {
+  string title = 1;
+  string cover = 2;
+  string slug = 3;
+  string rating = 4;
+  string type = 5;
+}
+
+message CompletedAnimes {
+  repeated CompletedAnime animes = 1;
+}

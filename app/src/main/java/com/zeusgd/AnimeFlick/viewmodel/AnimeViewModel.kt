@@ -15,7 +15,10 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.animeflick.datastore.completedDataStore
 import com.example.animeflick.datastore.favoritesDataStore
+import com.example.animeflick.datastore.followedDataStore
+import com.example.animeflick.datastore.pausedDataStore
 import com.example.animeflick.datastore.seenEpisodesDataStore
 import com.zeusgd.AnimeFlick.*
 import com.zeusgd.AnimeFlick.model.*
@@ -70,6 +73,53 @@ class AnimeViewModel(
 
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing
+
+    enum class AnimeStatus { None, Watching, Completed, Paused }
+
+    private fun hasSlugFollowed(u: UiState<FollowedAnimes>, slug: String): Boolean =
+        (u as? UiState.Success<FollowedAnimes>)
+            ?.data?.animesList?.any { it.slug == slug } == true
+
+    private fun hasSlugCompleted(u: UiState<CompletedAnimes>, slug: String): Boolean =
+        (u as? UiState.Success<CompletedAnimes>)
+            ?.data?.animesList?.any { it.slug == slug } == true
+
+    private fun hasSlugPaused(u: UiState<PausedAnimes>, slug: String): Boolean =
+        (u as? UiState.Success<PausedAnimes>)
+            ?.data?.animesList?.any { it.slug == slug } == true
+    fun statusFlow(context: Context, slug: String): Flow<AnimeStatus> =
+        combine(
+            followedUiState(context),      // Flow<UiState<FollowedAnimes>>
+            completedUiState(context),   // si tienes DataStore de completados */
+            pausedUiState(context)       // si tienes DataStore de en pausa */
+            // mientras no tengas los otros, simula vacío:
+        ) { followed, completed, paused ->
+
+            when {
+                hasSlugCompleted(completed, slug) -> AnimeStatus.Completed
+                hasSlugPaused(paused, slug)       -> AnimeStatus.Paused
+                hasSlugFollowed(followed, slug)   -> AnimeStatus.Watching
+                else               -> AnimeStatus.None
+            }
+        }
+            .catch { emit(AnimeStatus.None) }
+
+    fun setStatus(context: Context, anime: AnimeSearched, status: AnimeStatus) {
+        viewModelScope.launch {
+            // quita de todos
+            removeFollowed(context, anime.slug)
+            removeCompleted(context, anime.slug)
+            removePaused(context, anime.slug)
+
+            // añade solo al elegido
+            when (status) {
+                AnimeStatus.Watching  -> addFollowed(context, anime)   // ya la tienes
+                AnimeStatus.Completed -> addCompleted(context, anime)  // crea similar a addFollowed
+                AnimeStatus.Paused    -> addPaused(context, anime)     // crea similar
+                AnimeStatus.None      -> Unit
+            }
+        }
+    }
 
     init {
         listOf("tv", "ova", "special", "movie").forEach {
@@ -180,6 +230,30 @@ class AnimeViewModel(
         )
     }
 
+    fun followedUiState(context: Context): Flow<UiState<FollowedAnimes>> = flow {
+        emit(UiState.Loading)
+        emitAll(
+            context.followedDataStore.data
+                .map { UiState.Success(it) }
+        )
+    }
+
+    fun completedUiState(context: Context): Flow<UiState<CompletedAnimes>> = flow {
+        emit(UiState.Loading)
+        emitAll(
+            context.completedDataStore.data
+                .map { UiState.Success(it) }
+        )
+    }
+
+    fun pausedUiState(context: Context): Flow<UiState<PausedAnimes>> = flow {
+        emit(UiState.Loading)
+        emitAll(
+            context.pausedDataStore.data
+                .map { UiState.Success(it) }
+        )
+    }
+
     fun refreshRecentEpisodes(context: Context) {
         viewModelScope.launch {
             _isRefreshing.value = true
@@ -211,6 +285,57 @@ class AnimeViewModel(
             context.favoritesDataStore.updateData { current ->
                 val updated = current.animesList.filterNot { it.slug == slug }
                 FavoriteAnimes.newBuilder().addAllAnimes(updated).build()
+            }
+        }
+    }
+
+    fun addFollowed(context: Context, anime: AnimeSearched) {
+        viewModelScope.launch {
+            context.followedDataStore.updateData { current ->
+                current.toBuilder().addAnimes(anime.toProtoFollowed()).build()
+            }
+        }
+    }
+
+    fun removeFollowed(context: Context, slug: String) {
+        viewModelScope.launch {
+            context.followedDataStore.updateData { current ->
+                val updated = current.animesList.filterNot { it.slug == slug }
+                FollowedAnimes.newBuilder().addAllAnimes(updated).build()
+            }
+        }
+    }
+
+    fun addCompleted(context: Context, anime: AnimeSearched) {
+        viewModelScope.launch {
+            context.completedDataStore.updateData { current ->
+                current.toBuilder().addAnimes(anime.toProtoCompleted()).build()
+            }
+        }
+    }
+
+    fun removeCompleted(context: Context, slug: String) {
+        viewModelScope.launch {
+            context.completedDataStore.updateData { current ->
+                val updated = current.animesList.filterNot { it.slug == slug }
+                CompletedAnimes.newBuilder().addAllAnimes(updated).build()
+            }
+        }
+    }
+
+    fun addPaused(context: Context, anime: AnimeSearched) {
+        viewModelScope.launch {
+            context.pausedDataStore.updateData { current ->
+                current.toBuilder().addAnimes(anime.toProtoPaused()).build()
+            }
+        }
+    }
+
+    fun removePaused(context: Context, slug: String) {
+        viewModelScope.launch {
+            context.pausedDataStore.updateData { current ->
+                val updated = current.animesList.filterNot { it.slug == slug }
+                PausedAnimes.newBuilder().addAllAnimes(updated).build()
             }
         }
     }
