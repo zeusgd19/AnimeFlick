@@ -1,4 +1,4 @@
-package com.zeusgd.AnimeFlick.ui.theme
+package com.zeusgd.AnimeFlick.ui.visuals
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme

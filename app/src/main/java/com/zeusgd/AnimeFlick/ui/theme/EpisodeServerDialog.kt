@@ -8,32 +8,84 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.zeusgd.AnimeFlick.model.Episode
 
+// ----------------------
+// UI Model
+// ----------------------
+data class ServerUi(val name: String)
+
+// ----------------------
+// Pure UI
+// ----------------------
 @Composable
-fun EpisodeServerDialog(
-    episode: Episode,
+fun EpisodeServerDialogContent(
+    servers: List<ServerUi>,
     onDismiss: () -> Unit,
-    onSelect: (String) -> Unit
+    onSelect: (ServerUi) -> Unit,
+    title: String = "Elegir servidor"
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {},
-        title = { Text("Elegir servidor") },
+        title = { Text(title) },
         text = {
             Column {
-                listOf("YourUpload", "Stape", "Okru", "SW").forEach { server ->
+                servers.forEach { server ->
                     Button(
                         onClick = { onSelect(server) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 4.dp)
                     ) {
-                        Text(server)
+                        Text(server.name)
                     }
                 }
             }
         }
+    )
+}
+
+// ----------------------
+// Wrapper
+// ----------------------
+@Composable
+fun EpisodeServerDialog(
+    episode: Episode,
+    onDismiss: () -> Unit,
+    onSelect: (String) -> Unit
+) {
+    val defaultServers = listOf(
+        ServerUi("YourUpload"),
+        ServerUi("Stape"),
+        ServerUi("Okru"),
+        ServerUi("SW")
+    )
+
+    EpisodeServerDialogContent(
+        servers = defaultServers,
+        onDismiss = onDismiss,
+        onSelect = { onSelect(it.name) },
+        title = "Elegir servidor"
+    )
+}
+
+// ----------------------
+// Previews
+// ----------------------
+@Preview(showBackground = true, name = "Dialog - Lista estándar")
+@Composable
+private fun EpisodeServerDialogPreview() {
+    EpisodeServerDialogContent(
+        servers = listOf(
+            ServerUi("YourUpload"),
+            ServerUi("Stape"),
+            ServerUi("Okru"),
+            ServerUi("SW")
+        ),
+        onDismiss = {},
+        onSelect = {}
     )
 }

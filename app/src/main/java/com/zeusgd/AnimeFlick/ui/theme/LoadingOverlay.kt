@@ -12,14 +12,22 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
+// ----------------------
+// Pure UI
+// ----------------------
 @Composable
-fun LoadingOverlay(text: String = "Cargando...") {
+fun LoadingOverlayContent(
+    text: String,
+    modifier: Modifier = Modifier,
+    backgroundAlpha: Float = 0.4f
+) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.4f)),
+            .background(Color.Black.copy(alpha = backgroundAlpha)),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -28,4 +36,31 @@ fun LoadingOverlay(text: String = "Cargando...") {
             Text(text, color = Color.White)
         }
     }
+}
+
+// ----------------------
+// Wrapper
+// ----------------------
+@Composable
+fun LoadingOverlay(text: String = "Cargando...") {
+    LoadingOverlayContent(text = text)
+}
+
+
+// ----------------------
+// Previews
+// ----------------------
+@Preview(showBackground = true, showSystemUi = true, name = "Overlay - Default")
+@Composable
+private fun LoadingOverlayPreview_Default() {
+    LoadingOverlayContent(text = "Cargando...")
+}
+
+@Preview(showBackground = true, showSystemUi = true, name = "Overlay - Mensaje largo")
+@Composable
+private fun LoadingOverlayPreview_Long() {
+    LoadingOverlayContent(
+        text = "Procesando datos y preparando todo...",
+        backgroundAlpha = 0.55f
+    )
 }

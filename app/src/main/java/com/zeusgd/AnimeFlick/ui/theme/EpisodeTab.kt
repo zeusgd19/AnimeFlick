@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material3.AlertDialog
@@ -37,30 +37,54 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.zeusgd.AnimeFlick.R
 import com.zeusgd.AnimeFlick.VideoPlayerActivity
 import com.zeusgd.AnimeFlick.viewmodel.AnimeViewModel
 import java.util.Locale
 
-@Composable
-fun EpisodeTab(viewModel: AnimeViewModel) {
-    val snackbarHostState = remember { SnackbarHostState() }
-    val context = LocalContext.current
-    var isReversed by remember { mutableStateOf(false) }
+// ----------------------
+// UI Model
+// ----------------------
+data class EpisodeUi(
+    val slug: String,
+    val number: Int,
+    val seen: Boolean
+)
 
-    LaunchedEffect(viewModel.errorMessage) {
-        viewModel.errorMessage?.let {
+// ----------------------
+// Pure UI
+// ----------------------
+@Composable
+fun EpisodeTabContent(
+    episodes: List<EpisodeUi>,
+    isLoading: Boolean,
+    isReversed: Boolean,
+    onToggleOrder: () -> Unit,
+    onClickEpisode: (index: Int) -> Unit,
+    serverDialogIndex: Int?,                 // índice del episodio con diálogo abierto; null si cerrado
+    servers: List<String>,
+    onSelectServer: (server: String) -> Unit,
+    onDismissServerDialog: () -> Unit,
+    videoOptions: List<String>?,             // null = cerrado; lista = abierto
+    onSelectVideoQuality: (index: Int) -> Unit,
+    onDismissVideoOptions: () -> Unit,
+    errorMessage: String?,                   // para snackbars
+    onConsumeError: () -> Unit,
+    episodeLabel: String = "Episodio"        // texto pre-localizado
+) {
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Mostrar snackbar en cuanto llegue un error y ¡consumirlo!
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let {
             snackbarHostState.showSnackbar(it)
-            viewModel.clearError()
+            onConsumeError()
         }
     }
 
     Scaffold(
-        snackbarHost = {
-            SnackbarHost(hostState = snackbarHostState)
-        },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             Row(
                 modifier = Modifier
@@ -68,7 +92,7 @@ fun EpisodeTab(viewModel: AnimeViewModel) {
                     .padding(8.dp),
                 horizontalArrangement = Arrangement.End
             ) {
-                IconButton(onClick = { isReversed = !isReversed }) {
+                IconButton(onClick = onToggleOrder) {
                     Icon(
                         imageVector = Icons.Filled.SwapVert,
                         contentDescription = "Invertir orden",
@@ -78,42 +102,33 @@ fun EpisodeTab(viewModel: AnimeViewModel) {
             }
         }
     ) { paddingValues ->
-
-        val episodeList = if (isReversed) viewModel.episodeList.reversed() else viewModel.episodeList
-
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
             LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(episodeList) { episode ->
-                    val seenEpisodes by viewModel.isEpisodeSeenFlow(context).collectAsState(initial = emptySet())
-                    val isSeen = seenEpisodes.contains(episode.slug)
+                itemsIndexed(episodes) { index, ep ->
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable(enabled = !viewModel.isLoadingEpisode) {
-                                if(!isSeen) {
-                                    viewModel.onEpisodeSelected(episode)
-                                    viewModel.markEpisodeSeen(context, episode.slug)
-                                } else {
-                                    viewModel.unmarkEpisodeSeen(context, episode.slug)
-                                }
-                            }
+                            .clickable(enabled = !isLoading) { onClickEpisode(index) }
                             .padding(vertical = 12.dp, horizontal = 12.dp),
                         contentAlignment = Alignment.TopStart
                     ) {
+                        val label = episodeLabel.lowercase(Locale.ROOT)
+                            .replaceFirstChar { it.uppercaseChar() }
                         Text(
-                            text = stringResource(R.string.episode).lowercase(Locale.ROOT).replaceFirstChar { it.uppercaseChar() } + " " + episode.number,
+                            text = "$label ${ep.number}",
                             style = MaterialTheme.typography.bodyLarge,
-                            color = if (isSeen) Color.Red else MaterialTheme.colorScheme.onBackground
+                            color = if (ep.seen) Color.Red else MaterialTheme.colorScheme.onBackground
                         )
                     }
                 }
             }
 
-            if (viewModel.isLoadingEpisode) {
+            // Overlay de carga
+            if (isLoading) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -128,78 +143,45 @@ fun EpisodeTab(viewModel: AnimeViewModel) {
                 }
             }
 
-            viewModel.selectedEpisode?.let { episode ->
+            // Diálogo de servidores
+            serverDialogIndex?.let {
                 AlertDialog(
-                    onDismissRequest = { viewModel.clearSelectedEpisode() },
+                    onDismissRequest = onDismissServerDialog,
                     confirmButton = {},
                     title = { Text("Elegir servidor") },
                     text = {
                         Column {
-                            Button(
-                                onClick = {
-                                    viewModel.clearSelectedEpisode()
-                                    viewModel.onEpisodeClick(context, episode.slug, "YourUpload")
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("YourUpload")
-                            }
-                            Spacer(Modifier.height(8.dp))
-                            Button(
-                                onClick = {
-                                    viewModel.clearSelectedEpisode()
-                                    viewModel.onEpisodeClick(context, episode.slug, "Stape")
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("Stape")
-                            }
-                            Spacer(Modifier.height(8.dp))
-                            Button(
-                                onClick = {
-                                    viewModel.clearSelectedEpisode()
-                                    viewModel.onEpisodeClick(context, episode.slug, "Okru") // <--- NUEVO
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("Okru")
-                            }
-                            Spacer(Modifier.height(8.dp))
-                            Button(
-                                onClick = {
-                                    viewModel.clearSelectedEpisode()
-                                    viewModel.onEpisodeClick(context, episode.slug, "SW") // <--- NUEVO
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("StreamWish")
+                            servers.forEach { server ->
+                                Button(
+                                    onClick = { onSelectServer(server) },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp)
+                                ) {
+                                    Text(server)
+                                }
                             }
                         }
                     }
                 )
             }
-            viewModel.videoOptions.value?.let { options ->
+
+            // Diálogo de calidades
+            videoOptions?.let { opts ->
                 AlertDialog(
-                    onDismissRequest = { viewModel.clearVideoOptions() },
+                    onDismissRequest = onDismissVideoOptions,
                     confirmButton = {},
                     title = { Text("Elige calidad") },
                     text = {
                         Column {
-                            options.forEach { option ->
+                            opts.forEachIndexed { idx, q ->
                                 Button(
-                                    onClick = {
-                                        viewModel.clearVideoOptions()
-                                        val intent = Intent(context, VideoPlayerActivity::class.java).apply {
-                                            putExtra("videoUrl", option.url)
-                                            putExtra("headers", HashMap(option.headers))
-                                        }
-                                        context.startActivity(intent)
-                                    },
+                                    onClick = { onSelectVideoQuality(idx) },
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(vertical = 4.dp)
                                 ) {
-                                    Text(text = option.quality)
+                                    Text(q)
                                 }
                             }
                         }
@@ -208,4 +190,136 @@ fun EpisodeTab(viewModel: AnimeViewModel) {
             }
         }
     }
+}
+
+// ----------------------
+// Wrapper
+// ----------------------
+@Composable
+fun EpisodeTab(viewModel: AnimeViewModel) {
+    val context = LocalContext.current
+
+    // Orden actual
+    var isReversed by remember { mutableStateOf(false) }
+    val baseList = viewModel.episodeList
+    val listForUi = if (isReversed) baseList.asReversed() else baseList
+
+    // Episodios vistos (una sola colección, no por item)
+    val seenEpisodes by viewModel.isEpisodeSeenFlow(context)
+        .collectAsState(initial = emptySet())
+
+    // Lista UI
+    val episodesUi = remember(listForUi, seenEpisodes) {
+        listForUi.map { e -> EpisodeUi(e.slug, e.number, e.slug in seenEpisodes) }
+    }
+
+    // Error
+    val errorMessage = viewModel.errorMessage
+
+    // Diálogo de servidores: se abre si hay selectedEpisode
+    val selected = viewModel.selectedEpisode
+    val serverDialogIndex = selected?.let { sel ->
+        listForUi.indexOfFirst { it.slug == sel.slug }.takeIf { it >= 0 }
+    }
+
+    // Opciones de vídeo (si no es null => abrir)
+    val videoOptionsState = viewModel.videoOptions.value
+    val videoQualities = videoOptionsState?.map { it.quality }
+
+    // Label localizable para "Episodio"
+    val episodeLabel = "Episodio"
+
+    EpisodeTabContent(
+        episodes = episodesUi,
+        isLoading = viewModel.isLoadingEpisode,
+        isReversed = isReversed,
+        onToggleOrder = { isReversed = !isReversed },
+        onClickEpisode = { idx ->
+            val e = listForUi[idx]
+            if (e.slug !in seenEpisodes) {
+                viewModel.onEpisodeSelected(e)
+                viewModel.markEpisodeSeen(context, e.slug)
+            } else {
+                viewModel.unmarkEpisodeSeen(context, e.slug)
+            }
+        },
+        serverDialogIndex = serverDialogIndex,
+        servers = listOf("YourUpload", "Stape", "Okru", "SW"),
+        onSelectServer = { server ->
+            viewModel.clearSelectedEpisode()
+            // Dispara la carga de opciones de vídeo para ese server
+            selected?.let { ep ->
+                viewModel.onEpisodeClick(context, ep.slug, server)
+            }
+        },
+        onDismissServerDialog = { viewModel.clearSelectedEpisode() },
+        videoOptions = videoQualities,
+        onSelectVideoQuality = { optIndex ->
+            videoOptionsState?.getOrNull(optIndex)?.let { option ->
+                viewModel.clearVideoOptions()
+                val intent = Intent(context, VideoPlayerActivity::class.java).apply {
+                    putExtra("videoUrl", option.url)
+                    putExtra("headers", HashMap(option.headers))
+                }
+                context.startActivity(intent)
+            }
+        },
+        onDismissVideoOptions = { viewModel.clearVideoOptions() },
+        errorMessage = errorMessage,
+        onConsumeError = { viewModel.clearError() },
+        episodeLabel = episodeLabel.toString()
+    )
+}
+
+// ----------------------
+// Previews
+// ----------------------
+@Preview(showBackground = true, showSystemUi = true, name = "Episodes - Normal")
+@Composable
+fun EpisodeTabPreview_Normal() {
+    val sample = List(12) { i ->
+        EpisodeUi(slug = "ep-$i", number = i + 1, seen = i % 3 == 0)
+    }
+    EpisodeTabContent(
+        episodes = sample,
+        isLoading = false,
+        isReversed = false,
+        onToggleOrder = {},
+        onClickEpisode = {},
+        serverDialogIndex = null,
+        servers = listOf("YourUpload", "Stape", "Okru", "SW"),
+        onSelectServer = {},
+        onDismissServerDialog = {},
+        videoOptions = null,
+        onSelectVideoQuality = {},
+        onDismissVideoOptions = {},
+        errorMessage = null,
+        onConsumeError = {},
+        episodeLabel = "Episodio"
+    )
+}
+
+@Preview(showBackground = true, showSystemUi = true, name = "Episodes - Loading + Dialogs")
+@Composable
+fun EpisodeTabPreview_Loading_Dialogs() {
+    val sample = List(5) { i ->
+        EpisodeUi(slug = "ep-$i", number = i + 1, seen = i == 0)
+    }
+    EpisodeTabContent(
+        episodes = sample,
+        isLoading = true,
+        isReversed = true,
+        onToggleOrder = {},
+        onClickEpisode = {},
+        serverDialogIndex = 1,
+        servers = listOf("YourUpload", "Stape", "Okru", "SW"),
+        onSelectServer = {},
+        onDismissServerDialog = {},
+        videoOptions = listOf("1080p", "720p", "480p"),
+        onSelectVideoQuality = {},
+        onDismissVideoOptions = {},
+        errorMessage = "Error de ejemplo",
+        onConsumeError = {},
+        episodeLabel = "Episodio"
+    )
 }

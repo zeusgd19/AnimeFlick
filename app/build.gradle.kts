@@ -98,6 +98,8 @@ dependencies {
     implementation("androidx.core:core-ktx:1.10.1")
     implementation("com.google.android.exoplayer:exoplayer:2.18.1")
     implementation("com.github.jordyamc.oasis-jsbridge-android:oasis-jsbridge-duktape:1.0.2")
-    implementation("androidx.compose.material:material-icons-extended:1.6.1")
+    implementation("androidx.compose.material:material-icons-extended:1.5.0")
+    implementation("androidx.compose.ui:ui-tooling-preview:1.5.0")
+    debugImplementation("androidx.compose.ui:ui-tooling:1.5.0")
 }
 
