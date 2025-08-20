@@ -5,6 +5,9 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -20,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
@@ -48,7 +52,7 @@ fun DirectorioScreenContent(
     onClickItem: (pageIndex: Int, itemIndex: Int) -> Unit,
     onNearEnd: (pageIndex: Int) -> Unit,
     modifier: Modifier = Modifier,
-    nearEndThreshold: Int = 5
+    nearEndThreshold: Int = 8
 ) {
     val pagerState = rememberPagerState(
         initialPage = selectedTabIndex,
@@ -56,7 +60,6 @@ fun DirectorioScreenContent(
     )
     val scope = rememberCoroutineScope()
 
-    // Mantén sincronía TabRow <-> Pager (toque y swipe)
     LaunchedEffect(selectedTabIndex) {
         if (pagerState.currentPage != selectedTabIndex) {
             scope.launch { pagerState.animateScrollToPage(selectedTabIndex) }
@@ -85,13 +88,16 @@ fun DirectorioScreenContent(
         ) { pageIndex ->
             val items = getItemsForPage(pageIndex)
 
-            LazyColumn(
+            // -------- GRID en vez de lista --------
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = 140.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(16.dp)
             ) {
-                itemsIndexed(items) { index, item ->
+                itemsIndexed(items, key = { _, it -> it.title }) { index, item ->
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -99,35 +105,36 @@ fun DirectorioScreenContent(
                         shape = RoundedCornerShape(12.dp),
                         elevation = CardDefaults.cardElevation(6.dp)
                     ) {
-                        Row(modifier = Modifier.padding(12.dp)) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            // Poster
                             AsyncImage(
                                 model = item.coverUrl,
                                 contentDescription = item.title,
                                 modifier = Modifier
-                                    .size(90.dp)
+                                    .fillMaxWidth()
+                                    .aspectRatio(2f / 3f) // 3:2 (vertical)
                                     .clip(RoundedCornerShape(10.dp))
                             )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column(
-                                verticalArrangement = Arrangement.Center,
-                                modifier = Modifier.align(Alignment.CenterVertically)
-                            ) {
-                                Text(
-                                    text = item.title,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    maxLines = 2
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = item.type,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = Color.Gray
-                                )
-                            }
+                            Spacer(Modifier.height(8.dp))
+                            // Título
+                            Text(
+                                text = item.title,
+                                style = MaterialTheme.typography.titleSmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Spacer(Modifier.height(2.dp))
+                            // Tipo
+                            Text(
+                                text = item.type,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.Gray,
+                                maxLines = 1
+                            )
                         }
                     }
 
-                    // Aviso de "near end" para scroll infinito
+                    // near-end para scroll infinito en grid
                     if (index >= items.size - nearEndThreshold) {
                         onNearEnd(pageIndex)
                     }
@@ -136,6 +143,7 @@ fun DirectorioScreenContent(
         }
     }
 }
+
 
 // ----------------------
 // Wrapper
