@@ -5,19 +5,15 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
-import com.zeusgd.AnimeFlick.R
 import com.zeusgd.AnimeFlick.model.AnimeSearched
 import com.zeusgd.AnimeFlick.model.Episode
+import com.zeusgd.AnimeFlick.model.RecentEpisode
 import com.zeusgd.AnimeFlick.viewmodel.AnimeViewModel
 import kotlinx.coroutines.launch
 
@@ -27,7 +23,7 @@ import kotlinx.coroutines.launch
 data class RecentEpisodeListUi(
     val title: String,
     val number: Int,
-    val coverUrl: String?
+    val coverUrl: String
 )
 
 // ----------------------
@@ -38,7 +34,6 @@ fun RecientesScreenContent(
     episodes: List<RecentEpisodeListUi>,
     isRefreshing: Boolean,
     isLoadingEpisode: Boolean,
-    episodeLabel: String,
     onRefresh: () -> Unit,
     onClickEpisode: (index: Int) -> Unit,
     onInfoEpisode: (index: Int) -> Unit,
@@ -59,14 +54,13 @@ fun RecientesScreenContent(
             ) {
                 itemsIndexed(episodes, key = { _, it -> it.title + it.number }) { index, ep ->
                     // Convertimos a RecentEpisodeUi (del item) justo aquí
-                    RecentEpisodeItemContent(
-                        item = RecentEpisodeUi(               // <- el del otro fichero
+                    RecentEpisodeItem(
+                        episode = RecentEpisodeUi(               // <- el del otro fichero
                             coverUrl = ep.coverUrl,
                             title = ep.title,
                             number = ep.number
-                        ),
+                        ).toRecentEpisode(),
                         isLoading = isLoadingEpisode,
-                        episodeLabel = episodeLabel,
                         onClick = { onClickEpisode(index) },
                         onInfoClick = { onInfoEpisode(index) }
                     )
@@ -74,6 +68,14 @@ fun RecientesScreenContent(
             }
         }
     }
+}
+
+fun RecentEpisodeUi.toRecentEpisode(): RecentEpisode {
+    return RecentEpisode(
+        title = title,
+        number = number,
+        cover = coverUrl
+    )
 }
 
 // ----------------------
@@ -95,7 +97,6 @@ fun RecientesScreen(
         episodes = episodes.map { RecentEpisodeListUi(it.title, it.number, it.cover) },
         isRefreshing = isRefreshing,
         isLoadingEpisode = isLoadingEpisode,
-        episodeLabel = stringResource(R.string.episode),
         onRefresh = { viewModel.refreshRecentEpisodes(context) },
         onClickEpisode = { idx ->
             val episode = episodes[idx]
@@ -152,7 +153,6 @@ private fun RecientesScreenPreview_List() {
         episodes = sample,
         isRefreshing = false,
         isLoadingEpisode = false,
-        episodeLabel = "Episodio",
         onRefresh = {},
         onClickEpisode = {},
         onInfoEpisode = {}

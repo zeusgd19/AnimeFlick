@@ -23,7 +23,7 @@ import androidx.compose.ui.res.stringResource
 // UI model
 // ----------------------
 data class RecentEpisodeUi(
-    val coverUrl: String?,
+    val coverUrl: String,
     val title: String,
     val number: Int
 )
@@ -53,7 +53,7 @@ fun RecentEpisodeItemContent(
             model = item.coverUrl,
             contentDescription = item.title,
             modifier = Modifier
-                .size(72.dp)
+                .size(128.dp)
                 .clip(RoundedCornerShape(10.dp))
         )
 
@@ -102,7 +102,7 @@ fun RecentEpisodeItem(
     val label = stringResource(R.string.episode)
     RecentEpisodeItemContent(
         item = RecentEpisodeUi(
-            coverUrl = episode.cover,
+            coverUrl = "https://www3.animeflv.net/uploads/animes/covers/"+episode.cover.substring(episode.cover.indexOfLast { it.equals('/') } + 1, episode.cover.indexOfLast { it.equals('.') })+".jpg",
             title = episode.title,
             number = episode.number
         ),
