@@ -102,7 +102,7 @@ fun RecentEpisodeItem(
     val label = stringResource(R.string.episode)
     RecentEpisodeItemContent(
         item = RecentEpisodeUi(
-            coverUrl = "https://www3.animeflv.net/uploads/animes/covers/"+episode.cover.substring(episode.cover.indexOfLast { it.equals('/') } + 1, episode.cover.indexOfLast { it.equals('.') })+".jpg",
+            coverUrl = "https://www3.animeflv.net/uploads/animes/covers/"+episode.cover.substring(episode.cover.indexOfLast { it == '/' } + 1, episode.cover.indexOfLast { it == '.' })+".jpg",
             title = episode.title,
             number = episode.number
         ),

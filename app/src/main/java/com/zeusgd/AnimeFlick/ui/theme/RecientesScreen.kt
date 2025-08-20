@@ -140,14 +140,14 @@ fun RecientesScreen(
 // ----------------------
 // Previews
 // ----------------------
-@Preview(showBackground = true, showSystemUi = true, name = "Recientes - Lista")
+@Preview(showBackground = true, showSystemUi = false, name = "Recientes - Lista")
 @Composable
 private fun RecientesScreenPreview_List() {
     val sample = listOf(
-        RecentEpisodeListUi("Solo Leveling", 7, "https://placehold.co/200x120"),
-        RecentEpisodeListUi("Tensei Shitara Slime Datta Ken", 12, "https://placehold.co/200x120"),
-        RecentEpisodeListUi("Jujutsu Kaisen", 3, "https://placehold.co/200x120"),
-        RecentEpisodeListUi("Frieren", 20, "https://placehold.co/200x120"),
+        RecentEpisodeListUi("Solo Leveling", 7, "https://animeflv.net/uploads/animes/thumbs/4219.jpg"),
+        RecentEpisodeListUi("Tensei Shitara Slime Datta Ken", 12, "https://www3.animeflv.net/uploads/animes/covers/4179.jpg"),
+        RecentEpisodeListUi("Jujutsu Kaisen", 3, "https://www3.animeflv.net/uploads/animes/covers/4179.jpg"),
+        RecentEpisodeListUi("Frieren", 20, "https://www3.animeflv.net/uploads/animes/covers/4179.jpg"),
     )
     RecientesScreenContent(
         episodes = sample,
