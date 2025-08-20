@@ -1,76 +1,98 @@
 package com.zeusgd.AnimeFlick
 
-import android.animation.Animator
-import android.animation.AnimatorListenerAdapter
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
-import android.animation.PropertyValuesHolder
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.View
+import android.view.animation.DecelerateInterpolator
+import android.view.animation.PathInterpolator
 import android.widget.ImageView
-import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 
 class SplashActivity : AppCompatActivity() {
-    private lateinit var logoA: ImageView
-    private lateinit var logoText: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
-
+        // Ocultar la barra de estado
         WindowInsetsControllerCompat(window, window.decorView).let { controller ->
             controller.hide(WindowInsetsCompat.Type.systemBars())
-            controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            controller.systemBarsBehavior =
+                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
 
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_splash)
 
-        logoA = findViewById(R.id.logoA)
-        logoText = findViewById(R.id.logoText)
+        val logoIzquierda: ImageView = findViewById(R.id.logo_izquierda)
+        val logoDerecha: ImageView = findViewById(R.id.logo_derecha)
+        val logoAbajo: ImageView = findViewById(R.id.logo_abajo)
 
-        logoA.visibility = View.VISIBLE
-        logoA.scaleX = 10f
-        logoA.scaleY = 10f
-        logoText.scaleX = 3f
-        logoText.scaleY = 3f
-        val shrink = ObjectAnimator.ofPropertyValuesHolder(
-            logoA,
-            PropertyValuesHolder.ofFloat(View.SCALE_X, 1f),
-            PropertyValuesHolder.ofFloat(View.SCALE_Y, 1f)
-        ).apply {
-            duration = 600
-        }
+        logoDerecha.scaleX = 2f
+        logoDerecha.scaleY = 2f
+        logoIzquierda.scaleX = 2f
+        logoIzquierda.scaleY = 2f
+        logoAbajo.scaleX = 2f
+        logoAbajo.scaleY = 2f
 
-        val rotateFast = ObjectAnimator.ofFloat(logoA, View.ROTATION, 0f, 1080f).apply {
-            duration = 1000
-        }
+        // Posiciones iniciales
+        logoDerecha.translationX = 3000f
+        logoDerecha.translationY = 6000f
 
-        val moveLeft = ObjectAnimator.ofFloat(logoA, View.TRANSLATION_X, 0f, -270f).apply {
+        logoIzquierda.translationX = -3000f
+        logoIzquierda.translationY = 5000f
+
+        logoAbajo.translationX = -4000f
+        logoAbajo.translationY = 2000f
+
+        val customInterpolator = PathInterpolator(0.8f, 0f, 0.2f, 1f)
+
+        // Animación derecha → centro
+        val animRight = AnimatorSet().apply {
+            playTogether(
+                ObjectAnimator.ofFloat(logoDerecha, View.TRANSLATION_X, 0f),
+                ObjectAnimator.ofFloat(logoDerecha, View.TRANSLATION_Y, 0f)
+            )
+            interpolator = customInterpolator
             duration = 500
         }
 
-        val textSlide = ObjectAnimator.ofFloat(logoText, View.TRANSLATION_X, -400f, -270f).apply {
-            duration = 600
-            addListener(object : AnimatorListenerAdapter() {
-                override fun onAnimationStart(animation: Animator) {
-                    logoText.visibility = View.VISIBLE
-                }
-            })
+        // Animación izquierda → centro
+        val animLeft = AnimatorSet().apply {
+            playTogether(
+                ObjectAnimator.ofFloat(logoIzquierda, View.TRANSLATION_X, 0f),
+                ObjectAnimator.ofFloat(logoIzquierda, View.TRANSLATION_Y, 0f)
+            )
+            interpolator = customInterpolator
+            duration = 300
         }
 
-        val allAnim = AnimatorSet()
-        allAnim.playSequentially(shrink, rotateFast, moveLeft, textSlide)
-        allAnim.start()
+        // Animación abajo → centro
+        val animBottom = AnimatorSet().apply {
+            playTogether(
+                ObjectAnimator.ofFloat(logoAbajo, View.TRANSLATION_Y, 0f),
+                ObjectAnimator.ofFloat(logoAbajo, View.TRANSLATION_X, 0f)
+            )
+            interpolator = customInterpolator
+            duration = 300
+        }
 
+        // Secuencia total
+        val sequence = AnimatorSet().apply {
+            play(animRight)
+            play(animLeft).after(animRight)
+            play(animBottom).after(animLeft)
+        }
+
+        sequence.start()
+
+        // Ir al MainActivity después
         Handler(Looper.getMainLooper()).postDelayed({
             startActivity(Intent(this, MainActivity::class.java))
             finish()
-        }, 3000)
+        }, 2000)
     }
 }
-
