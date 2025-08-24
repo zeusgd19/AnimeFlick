@@ -61,7 +61,8 @@ fun EpisodeServerDialog(
         ServerUi("YourUpload"),
         ServerUi("Stape"),
         ServerUi("Okru"),
-        ServerUi("SW")
+        ServerUi("SW"),
+        ServerUi("Mega")
     )
 
     EpisodeServerDialogContent(
@@ -83,7 +84,8 @@ private fun EpisodeServerDialogPreview() {
             ServerUi("YourUpload"),
             ServerUi("Stape"),
             ServerUi("Okru"),
-            ServerUi("SW")
+            ServerUi("SW"),
+            ServerUi("Mega")
         ),
         onDismiss = {},
         onSelect = {}

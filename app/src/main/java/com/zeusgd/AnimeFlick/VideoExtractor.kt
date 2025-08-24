@@ -1,4 +1,3 @@
-
 package com.zeusgd.AnimeFlick
 
 import android.content.Context
@@ -201,6 +200,17 @@ object VideoExtractor {
         }
     }
 
+    suspend fun extractMegaVideo(url: String): Pair<String, Map<String, String>>? {
+        return try {
+            val downLink = PatternUtil.extractLink(url) ?: return null
+
+            Pair(downLink, emptyMap())
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
     data class Option(
         val name: String,              // Nombre del servidor o del anime
         val quality: String,           // Ej: "480p", "720p"
@@ -213,6 +223,7 @@ object VideoExtractor {
             "yourupload" -> extractYourUploadVideo(embedUrl, context)
             "stape" -> extractStapeVideo(embedUrl, context)
             "sw" -> extractStreamWishVideo(embedUrl, context)
+            "mega" -> extractMegaVideo(embedUrl)
             else -> null
         }
     }

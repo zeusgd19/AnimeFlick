@@ -244,7 +244,7 @@ fun EpisodeTab(viewModel: AnimeViewModel) {
             }
         },
         serverDialogIndex = serverDialogIndex,
-        servers = listOf("YourUpload", "Stape", "Okru", "SW"),
+        servers = listOf("YourUpload", "Stape", "Okru", "SW", "Mega"),
         onSelectServer = { server ->
             viewModel.clearSelectedEpisode()
             // Dispara la carga de opciones de vídeo para ese server
@@ -287,7 +287,7 @@ fun EpisodeTabPreview_Normal() {
         onToggleOrder = {},
         onClickEpisode = {},
         serverDialogIndex = null,
-        servers = listOf("YourUpload", "Stape", "Okru", "SW"),
+        servers = listOf("YourUpload", "Stape", "Okru", "SW", "Mega"),
         onSelectServer = {},
         onDismissServerDialog = {},
         videoOptions = null,
@@ -312,7 +312,7 @@ fun EpisodeTabPreview_Loading_Dialogs() {
         onToggleOrder = {},
         onClickEpisode = {},
         serverDialogIndex = 1,
-        servers = listOf("YourUpload", "Stape", "Okru", "SW"),
+        servers = listOf("YourUpload", "Stape", "Okru", "SW", "Mega"),
         onSelectServer = {},
         onDismissServerDialog = {},
         videoOptions = listOf("1080p", "720p", "480p"),

@@ -35,8 +35,8 @@ fun RecientesScreenContent(
     isRefreshing: Boolean,
     isLoadingEpisode: Boolean,
     onRefresh: () -> Unit,
-    onClickEpisode: (index: Int) -> Unit,
-    onInfoEpisode: (index: Int) -> Unit,
+    onClickEpisode: (index: RecentEpisode) -> Unit,
+    onInfoEpisode: (index: RecentEpisode) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState()
@@ -55,14 +55,10 @@ fun RecientesScreenContent(
                 itemsIndexed(episodes, key = { _, it -> it.title + it.number }) { index, ep ->
                     // Convertimos a RecentEpisodeUi (del item) justo aquí
                     RecentEpisodeItem(
-                        episode = RecentEpisodeUi(               // <- el del otro fichero
-                            coverUrl = ep.coverUrl,
-                            title = ep.title,
-                            number = ep.number
-                        ).toRecentEpisode(),
+                        episode = ep.toRecentEpisode(),
                         isLoading = isLoadingEpisode,
-                        onClick = { onClickEpisode(index) },
-                        onInfoClick = { onInfoEpisode(index) }
+                        onClick = { onClickEpisode(ep.toRecentEpisode()) },
+                        onInfoClick = { onInfoEpisode(ep.toRecentEpisode()) }
                     )
                 }
             }
@@ -70,7 +66,7 @@ fun RecientesScreenContent(
     }
 }
 
-fun RecentEpisodeUi.toRecentEpisode(): RecentEpisode {
+fun RecentEpisodeListUi.toRecentEpisode(): RecentEpisode {
     return RecentEpisode(
         title = title,
         number = number,
@@ -97,9 +93,8 @@ fun RecientesScreen(
         episodes = episodes.map { RecentEpisodeListUi(it.title, it.number, it.cover) },
         isRefreshing = isRefreshing,
         isLoadingEpisode = isLoadingEpisode,
-        onRefresh = { viewModel.refreshRecentEpisodes(context) },
-        onClickEpisode = { idx ->
-            val episode = episodes[idx]
+        onRefresh = { viewModel.refreshRecentEpisodes() },
+        onClickEpisode = { episode ->
             scope.launch {
                 val results = viewModel.searchDirect(episode.title.replace(" ", "%20"))
                 val epSlug = "${results.first().slug}-${episode.number}"
@@ -108,8 +103,7 @@ fun RecientesScreen(
                 )
             }
         },
-        onInfoEpisode = { idx ->
-            val episode = episodes[idx]
+        onInfoEpisode = { episode ->
             scope.launch {
                 val results = viewModel.searchDirect(episode.title.replace(" ", "%20"))
                 if (results.isNotEmpty()) {

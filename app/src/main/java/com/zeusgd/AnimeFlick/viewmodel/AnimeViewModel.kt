@@ -3,6 +3,7 @@ package com.zeusgd.AnimeFlick.viewmodel
 import UiState
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.runtime.State
@@ -208,7 +209,14 @@ class AnimeViewModel(
                     page = page,
                     filter = AnimeApiService.AnimeFilterRequest(types = listOf(type))
                 )
-                _animeMap[type]?.addAll(result.data.media)
+
+                val sortedResult = result.data.media.sortedWith(
+                    compareBy<AnimeSearched> {
+                        val first = it.title.firstOrNull() ?: ' '
+                        if (first.isLetterOrDigit()) 1 else 0
+                    }.thenBy { it.title }
+                )
+                _animeMap[type]?.addAll(sortedResult)
                 pageMap[type] = page + 1
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -254,11 +262,9 @@ class AnimeViewModel(
         )
     }
 
-    fun refreshRecentEpisodes(context: Context) {
+    fun refreshRecentEpisodes() {
         viewModelScope.launch {
             _isRefreshing.value = true
-            Toast.makeText(context, "Actualizando...", Toast.LENGTH_SHORT).show()
-            val start = System.currentTimeMillis()
             try {
                 val result = api.getRecentEpisodes()
                 recentEpisodes.clear()
@@ -266,8 +272,6 @@ class AnimeViewModel(
             } catch (e: Exception) {
                 e.printStackTrace()
             }
-            val elapsed = System.currentTimeMillis() - start
-            delay((1500L - elapsed).coerceAtLeast(0L) + 600L)
             _isRefreshing.value = false
         }
     }
@@ -439,10 +443,17 @@ class AnimeViewModel(
                     if (options.isEmpty()) throw Exception("No se pudo extraer el enlace de Okru")
                     _videoOptions.value = options
                     return@launch
+                } else if (server.equals("mega", ignoreCase = true)) {
+                    val mp4 = VideoExtractor.extract(server, embedUrl, context)
+                        ?: throw Exception("No se pudo extraer el enlace del vídeo")
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(mp4.first))
+                    intent.addCategory(Intent.CATEGORY_BROWSABLE)
+                    context.startActivity(intent)
+                    return@launch
                 }
 
                 val mp4 = VideoExtractor.extract(server, embedUrl, context)
-                if (mp4 == null) throw Exception("No se pudo extraer el enlace del vídeo")
+                    ?: throw Exception("No se pudo extraer el enlace del vídeo")
 
                 val isPlayable = isVideoPlayable(mp4.first, mp4.second)
                 if (!isPlayable) throw Exception("El vídeo no está disponible")

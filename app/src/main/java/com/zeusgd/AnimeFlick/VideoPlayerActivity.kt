@@ -57,8 +57,19 @@ class VideoPlayerActivity : AppCompatActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        playerView.player = player
+    }
+
     override fun onStop() {
         super.onStop()
+        playerView.player = null
+        player.playWhenReady = false
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
         player.release()
     }
 
