@@ -15,4 +15,29 @@
         android:layout_gravity="center"
         android:background="#000000" />
 
+    <View
+        android:id="@+id/loading_scrim"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#66000000"
+        android:visibility="gone" />
+
+    <!-- Loader centrado -->
+    <ProgressBar
+        android:id="@+id/loading_overlay"
+        style="?android:attr/progressBarStyleLarge"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:layout_gravity="center"
+        android:indeterminate="true"
+        android:visibility="gone" />
+
+    <View
+        android:id="@+id/touch_blocker"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone" />
+
 </FrameLayout>

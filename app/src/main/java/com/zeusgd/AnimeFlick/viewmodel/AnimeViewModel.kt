@@ -54,6 +54,8 @@ class AnimeViewModel(
         savedState["day"] ?: "Lunes"
     )
 
+    private val preferredServers = listOf("YourUpload", "Stape", "Okru", "SW", "Mega")
+
     var recentEpisodes = mutableStateListOf<RecentEpisode>()
     var airingAnimeByDay by mutableStateOf<Map<String, List<AiringAnime>>>(emptyMap())
     var isLoadingTemporada by mutableStateOf(false)
@@ -76,6 +78,13 @@ class AnimeViewModel(
     val isRefreshing: StateFlow<Boolean> = _isRefreshing
 
     enum class AnimeStatus { None, Watching, Completed, Paused }
+
+    data class Playable(
+        val url: String,
+        val headers: Map<String, String>,
+        val slug: String,
+        val server: String
+    )
 
     private fun hasSlugFollowed(u: UiState<FollowedAnimes>, slug: String): Boolean =
         (u as? UiState.Success<FollowedAnimes>)
@@ -428,10 +437,115 @@ class AnimeViewModel(
         }
     }
 
-    fun onEpisodeClick(context: Context, episodeSlug: String, server: String) {
+    suspend fun findPlayableForSlug(
+        episodeSlug: String,
+        serverOrder: List<String> = preferredServers,
+        context: Context
+    ): Playable? {
+        val servers = getEmbedPlayerEpisode(episodeSlug)
+
+        for (srv in serverOrder) {
+            val embed = servers.find { it.name.equals(srv, ignoreCase = true) }?.embed ?: continue
+
+            if (srv.equals("okru", ignoreCase = true)) {
+                val candidate = VideoExtractor.extractOkruVideo(embed).firstOrNull() ?: continue
+                if (isVideoPlayable(candidate.url, candidate.headers)) {
+                    return Playable(candidate.url, candidate.headers, episodeSlug, srv)
+                }
+                continue
+            }
+
+            if (srv.equals("mega", ignoreCase = true)) {
+                val mp4 = VideoExtractor.extract(srv, embed, context) ?: continue
+                if (isVideoPlayable(mp4.first, mp4.second)) {
+                    return Playable(mp4.first, mp4.second, episodeSlug, srv)
+                }
+                continue
+            }
+
+            val mp4 = VideoExtractor.extract(srv, embed, context) ?: continue
+            if (isVideoPlayable(mp4.first, mp4.second)) {
+                return Playable(mp4.first, mp4.second, episodeSlug, srv)
+            }
+        }
+        return null
+    }
+
+
+    private fun nextEpisodeSlug(current: String): String? {
+        // Matchea cualquier texto y un bloque numérico al final
+        val m = Regex("""^(.*?)(\d+)$""").find(current) ?: return null
+        val prefix = m.groupValues[1]
+        val numStr = m.groupValues[2]
+        val nextNum = (numStr.toLong() + 1).toString().padStart(numStr.length, '0')
+        return prefix + nextNum
+    }
+
+    suspend fun findPlayableForNext(
+        currentSlug: String,
+        serverOrder: List<String> = preferredServers,
+        context: Context
+    ): Playable? {
+        val next = nextEpisodeSlug(currentSlug) ?: return null
+        return findPlayableForSlug(next, serverOrder, context)
+    }
+
+    private suspend fun resolvePlayableUrl(
+        episodeSlug: String,
+        serverOrder: List<String> = preferredServers,
+        context: Context,
+    ): Pair<String, Map<String, String>>? {
+        val servers = getEmbedPlayerEpisode(episodeSlug)
+
+        for (srv in serverOrder) {
+            val embed = servers.find { it.name.equals(srv, ignoreCase = true) }?.embed ?: continue
+
+            if (srv.equals("okru", ignoreCase = true)) {
+                val options = VideoExtractor.extractOkruVideo(embed)
+                val candidate = options.firstOrNull()
+                if (candidate != null) {
+                    val playable = isVideoPlayable(candidate.url, candidate.headers)
+                    if (playable) {
+                        onEpisodeClick(context, episodeSlug, srv, false)
+                        return null // ← corta aquí
+                    }
+                }
+                continue
+            }
+
+            if (srv.equals("mega", ignoreCase = true)) {
+                val mp4 = VideoExtractor.extract(srv, embed, context)
+                if (mp4 != null) {
+                    val playable = isVideoPlayable(mp4.first, mp4.second)
+                    if (playable) {
+                        onEpisodeClick(context, episodeSlug, srv, false)
+                        return null // ← corta aquí
+                    }
+                }
+                continue
+            }
+
+            val mp4 = VideoExtractor.extract(srv, embed, context) ?: continue
+            val playable = isVideoPlayable(mp4.first, mp4.second)
+            if (playable) {
+                onEpisodeClick(context, episodeSlug, srv, false)
+                return null // ← corta aquí
+            }
+        }
+
+        return null
+    }
+
+    fun onEpisodeClick(context: Context, episodeSlug: String, server: String, isNext: Boolean) {
         viewModelScope.launch {
             isLoadingEpisode = true
             errorMessage = null
+
+            if(isNext){
+                val nextSlug = nextEpisodeSlug(episodeSlug) ?: ""
+                resolvePlayableUrl(nextSlug, preferredServers, context)
+                return@launch
+            }
 
             try {
                 val servers = getEmbedPlayerEpisode(episodeSlug)
@@ -461,6 +575,8 @@ class AnimeViewModel(
                 val intent = Intent(context, VideoPlayerActivity::class.java).apply {
                     putExtra("videoUrl", mp4.first)
                     putExtra("headers", HashMap(mp4.second))
+                    putExtra("currentSlug", episodeSlug)
+                    putExtra("currentServer", server)
                 }
                 context.startActivity(intent)
 

@@ -249,7 +249,7 @@ fun EpisodeTab(viewModel: AnimeViewModel) {
             viewModel.clearSelectedEpisode()
             // Dispara la carga de opciones de vídeo para ese server
             selected?.let { ep ->
-                viewModel.onEpisodeClick(context, ep.slug, server)
+                viewModel.onEpisodeClick(context, ep.slug, server, false)
             }
         },
         onDismissServerDialog = { viewModel.clearSelectedEpisode() },

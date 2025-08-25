@@ -125,7 +125,7 @@ fun RecientesScreen(
             onDismiss = { viewModel.clearSelectedEpisode() },
             onSelect = { server ->
                 viewModel.clearSelectedEpisode()
-                viewModel.onEpisodeClick(context, episode.slug, server)
+                viewModel.onEpisodeClick(context, episode.slug, server, false)
             }
         )
     }

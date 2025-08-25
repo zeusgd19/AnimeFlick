@@ -46,17 +46,38 @@
         android:gravity="center"
         android:orientation="horizontal">
 
-        <ImageButton android:id="@id/exo_rew"
-            style="@style/ExoMediaButton.Rewind" />
+        <ImageButton
+            android:id="@id/exo_rew"
+            style="@style/ExoMediaButton.Rewind"
+            android:contentDescription="Exo Rew" />
 
-        <ImageButton android:id="@id/exo_play"
-            style="@style/ExoMediaButton.Play" />
+        <ImageButton
+            android:id="@id/exo_play"
+            style="@style/ExoMediaButton.Play"
+            android:contentDescription="Play" />
 
-        <ImageButton android:id="@id/exo_pause"
-            style="@style/ExoMediaButton.Pause" />
+        <ImageButton
+            android:id="@id/exo_pause"
+            style="@style/ExoMediaButton.Pause"
+            android:contentDescription="Pause" />
 
-        <ImageButton android:id="@id/exo_ffwd"
-            style="@style/ExoMediaButton.FastForward" />
+        <ImageButton
+            android:id="@id/exo_ffwd"
+            style="@style/ExoMediaButton.FastForward"
+            android:contentDescription="FFWD" />
+
+        <!-- NUEVO BOTÓN: SIGUIENTE EPISODIO -->
+
+        <ImageButton
+            android:id="@+id/btn_next_episode"
+            style="@style/ExoMediaButton"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="40dp"
+            android:src="@drawable/ic_next"
+            android:scaleType="centerInside"
+            android:contentDescription="Next Episode" />
+
     </LinearLayout>
 
 </LinearLayout>
