@@ -40,6 +40,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.zeusgd.AnimeFlick.VideoPlayerActivity
+import com.zeusgd.AnimeFlick.ui.auth.AuthViewModel
 import com.zeusgd.AnimeFlick.viewmodel.AnimeViewModel
 import java.util.Locale
 
@@ -196,7 +197,7 @@ fun EpisodeTabContent(
 // Wrapper
 // ----------------------
 @Composable
-fun EpisodeTab(viewModel: AnimeViewModel) {
+fun EpisodeTab(viewModel: AnimeViewModel, authViewModel: AuthViewModel) {
     val context = LocalContext.current
 
     // Orden actual
@@ -229,6 +230,9 @@ fun EpisodeTab(viewModel: AnimeViewModel) {
     // Label localizable para "Episodio"
     val episodeLabel = "Episodio"
 
+    val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
+
+
     EpisodeTabContent(
         episodes = episodesUi,
         isLoading = viewModel.isLoadingEpisode,
@@ -239,8 +243,14 @@ fun EpisodeTab(viewModel: AnimeViewModel) {
             if (e.slug !in seenEpisodes) {
                 viewModel.onEpisodeSelected(e)
                 viewModel.markEpisodeSeen(context, e.slug)
+                if(isLoggedIn) {
+                    authViewModel.addWatchedEpisode(e.slug, context)
+                }
             } else {
                 viewModel.unmarkEpisodeSeen(context, e.slug)
+                if(isLoggedIn) {
+                    authViewModel.deleteWatchedEpisode(e.slug, context)
+                }
             }
         },
         serverDialogIndex = serverDialogIndex,

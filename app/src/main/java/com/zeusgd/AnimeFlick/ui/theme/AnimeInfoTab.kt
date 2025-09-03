@@ -1,6 +1,7 @@
 package com.zeusgd.AnimeFlick.ui.theme
 
 import android.content.Context
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -39,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.zeusgd.AnimeFlick.model.Anime
 import com.zeusgd.AnimeFlick.model.AnimeSearched
+import com.zeusgd.AnimeFlick.ui.auth.AuthViewModel
 import com.zeusgd.AnimeFlick.viewmodel.AnimeViewModel
 
 // ----------------------
@@ -171,6 +173,7 @@ fun AnimeInfoTab(
     context: Context,
     anime: Anime,
     viewModel: AnimeViewModel,
+    authViewModel: AuthViewModel,
     animeSearched: AnimeSearched
 ) {
     val status by viewModel.statusFlow(context, animeSearched.slug)
@@ -187,6 +190,8 @@ fun AnimeInfoTab(
     // Sinopsis (con posible traducción)
     var synopsis by remember { mutableStateOf(anime.synopsis) }
     val locale = context.resources.configuration.locales[0]
+
+    val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
     LaunchedEffect(anime.title, locale.language) {
         synopsis = if (locale.language != "es") {
             viewModel.translateSinopsis(anime.synopsis, locale.language)
@@ -213,6 +218,10 @@ fun AnimeInfoTab(
                 DetailStatus.PAUSED -> AnimeViewModel.AnimeStatus.Paused
             }
             viewModel.setStatus(context, animeSearched, mapped)
+            Log.e("Estado", mapped.name)
+            if(isLoggedIn) {
+                authViewModel.setProgress(animeSearched, mapped.name, context)
+            }
         }
     )
 }

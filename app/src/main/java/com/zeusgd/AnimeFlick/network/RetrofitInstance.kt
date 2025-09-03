@@ -1,12 +1,13 @@
 package com.zeusgd.AnimeFlick.network
 
 import com.zeusgd.AnimeFlick.LibreTranslateApi
+import com.zeusgd.AnimeFlick.data.remote.SupabaseApiService
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 object RetrofitInstance {
     private const val BASE_URL = "https://animeflv.ahmedrangel.com/"
-    private const val BASE_URL2 = "https://api-anime-swart.vercel.app/"
+    private const val BASE_URL2 = "https://zeusgd19.pythonanywhere.com/"
 
     val api: AnimeApiService by lazy {
         Retrofit.Builder()
@@ -16,12 +17,12 @@ object RetrofitInstance {
             .create(AnimeApiService::class.java)
     }
 
-    val apiVercel: AnimeApiService by lazy {
+    val pyhtonApiSupabase: SupabaseApiService by lazy {
         Retrofit.Builder()
             .baseUrl(BASE_URL2)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
-            .create(AnimeApiService::class.java)
+            .create(SupabaseApiService::class.java)
     }
 
     val translateApi = Retrofit.Builder()

@@ -4,6 +4,7 @@ plugins {
     id("kotlin-kapt")
     id("com.google.protobuf") version "0.9.4"
     id("org.jetbrains.kotlin.plugin.serialization") version "1.9.0"
+    alias(libs.plugins.compose.compiler)
 }
 
 
@@ -28,8 +29,8 @@ android {
         applicationId = "com.zeusgd.AnimeFlick"
         minSdk = 24
         targetSdk = 35
-        versionCode = 8
-        versionName = "1.4.3"
+        versionCode = 9
+        versionName = "1.4.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -56,9 +57,9 @@ android {
     buildFeatures {
         compose = true
     }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.1"
-    }
+//    composeOptions {
+//        kotlinCompilerExtensionVersion = "1.6.1"
+//    }
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -93,6 +94,7 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.4.0")
     implementation(libs.volley)
     implementation(libs.firebase.crashlytics.buildtools)
+    implementation(libs.androidx.room.runtime.android)
     testImplementation("org.testng:testng:6.9.6")
     kapt("androidx.room:room-compiler:2.5.2")
     implementation("androidx.core:core-ktx:1.10.1")

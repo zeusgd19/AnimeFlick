@@ -51,23 +51,30 @@ suspend fun getUpdatedInfo(): String {
 }
 
 suspend fun checkForUpdateFromGitHub(context: Context): String? {
-    val client = HttpClient(OkHttp) {
-        install(ContentNegotiation) {
-            json(Json { ignoreUnknownKeys = true })
+    return try {
+        val client = HttpClient(OkHttp) {
+            install(ContentNegotiation) {
+                json(Json { ignoreUnknownKeys = true })
+            }
         }
-    }
 
-    val response = client.get("https://api.github.com/repos/zeusgd19/AnimeFlick/releases/latest")
-    val release = response.body<GitHubRelease>()
+        val response = client.get("https://api.github.com/repos/zeusgd19/AnimeFlick/releases/latest")
+        val release = response.body<GitHubRelease>()
 
-    updatedInfo = release.body;
+        updatedInfo = release.body
 
-    val currentVersion = getInstalledVersion(context)
-    val remoteVersion = release.tag.removePrefix("v")
+        val currentVersion = getInstalledVersion(context)
+        val remoteVersion = release.tag.removePrefix("v")
 
-    return if (currentVersion != remoteVersion) {
-        release.assets.firstOrNull { it.name.endsWith(".apk") }?.downloadUrl
-    } else {
+        if (currentVersion != remoteVersion) {
+            release.assets.firstOrNull { it.name.endsWith(".apk") }?.downloadUrl
+        } else {
+            null
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+        // Aquí puedes devolver null o lanzar un estado de error al ViewModel si quieres mostrar algo
+        Toast.makeText(context, "Ha habido un error intentando buscar la actualización", Toast.LENGTH_SHORT).show()
         null
     }
 }

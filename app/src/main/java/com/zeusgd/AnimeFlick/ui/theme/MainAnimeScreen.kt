@@ -1,13 +1,19 @@
 package com.zeusgd.AnimeFlick.ui.theme
 
+import TokenStorePrefs
 import android.content.Context
+import android.content.SharedPreferences
 import android.os.Build.VERSION_CODES.TIRAMISU
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Login
+import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
@@ -19,10 +25,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.zeusgd.AnimeFlick.R
@@ -30,6 +38,9 @@ import com.zeusgd.AnimeFlick.Screen
 import com.zeusgd.AnimeFlick.viewmodel.AnimeViewModel
 import kotlinx.coroutines.launch
 import checkForUpdateFromGitHub
+import com.android.dx.Local
+import com.zeusgd.AnimeFlick.ui.auth.AuthViewModel
+import com.zeusgd.AnimeFlick.ui.auth.LoginScreen
 import downloadAndInstall
 import getUpdatedInfo
 
@@ -60,6 +71,10 @@ fun MainAnimeScreenContent(
     drawerItems: List<DrawerItemUi>,
     onDrawerItemClick: (index: Int) -> Unit,
     drawerHeader: @Composable () -> Unit,
+    showLoginAction: Boolean,
+    onLoginClick: () -> Unit,
+    onLogoutClick: () -> Unit,
+    username: String,
 
     // Update dialog
     showUpdateDialog: Boolean,
@@ -73,9 +88,13 @@ fun MainAnimeScreenContent(
 
     // Content
     content: @Composable () -> Unit,
+    context: Context
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    val sharedPreferences = remember {
+        context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+    }
 
     if (showUpdateDialog) {
         AlertDialog(
@@ -106,34 +125,81 @@ fun MainAnimeScreenContent(
     }
 
     ModalNavigationDrawer(
-        drawerState = drawerState,
-        scrimColor = Color.Transparent,
-        drawerContent = {
-            ModalDrawerSheet(
-                modifier = Modifier.width(300.dp)
-            ) {
-                // Header (slot)
-                Box(
-                    modifier = Modifier
-                        .background(Color.Blue)
-                        .height(150.dp)
-                        .fillMaxWidth()
-                ) { drawerHeader() }
+            drawerState = drawerState,
+            scrimColor = Color.Transparent,
+            drawerContent = {
+                ModalDrawerSheet(
+                    modifier = Modifier.width(300.dp)
+                ) {
+                    // Header (slot)
+                    Box(
+                        modifier = Modifier
+                            .background(Color.Blue)
+                            .height(150.dp)
+                            .fillMaxWidth()
+                    ) { drawerHeader() }
 
-                drawerItems.forEachIndexed { index, item ->
-                    NavigationDrawerItem(
-                        icon = item.icon,
-                        label = { Text(item.label) },
-                        selected = false,
-                        onClick = {
-                            scope.launch { drawerState.close() }
-                            onDrawerItemClick(index)
-                        },
-                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                    )
+                    drawerItems.forEachIndexed { index, item ->
+                        NavigationDrawerItem(
+                            icon = item.icon,
+                            label = { Text(item.label) },
+                            selected = false,
+                            onClick = {
+                                scope.launch { drawerState.close() }
+                                onDrawerItemClick(index)
+                            },
+                            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                        )
+                    }
+
+                    Spacer(Modifier.weight(1f))
+
+                    if (showLoginAction) {
+                        // Botón abajo a la izquierda
+                        TextButton(
+                            onClick = {
+                                scope.launch { drawerState.close() }
+                                onLoginClick()
+                            },
+                            modifier = Modifier
+                                .padding(start = 12.dp, bottom = 12.dp)
+                                .align(Alignment.Start)
+                        ) {
+                            Icon(Icons.Default.Login, contentDescription = null) // pon tu icono preferido
+                            Spacer(Modifier.width(6.dp))
+                            Text("Iniciar sesión")
+                        }
+                    } else {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Person, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text(username)
+                            }
+
+                            TextButton(
+                                onClick = {
+                                    scope.launch { drawerState.close() }
+                                    onLogoutClick()
+                                }
+                            ) {
+                                Icon(Icons.Default.Logout, contentDescription = null)
+                                Spacer(Modifier.width(6.dp))
+                                Text("Cerrar Sesión")
+                            }
+                        }
+
+                    }
                 }
-            }
-        }
+          }
     ) {
         Scaffold(
             topBar = {
@@ -191,8 +257,20 @@ fun MainAnimeScreenContent(
 fun MainAnimeScreen(
     context: Context,
     viewModel: AnimeViewModel,
-    window: android.view.Window
+    window: android.view.Window,
+    authViewModel: AuthViewModel
 ) {
+    val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
+    val sharedPreferences = remember {
+        context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+    }
+
+    // Verificamos si ya hay sesión guardada
+    LaunchedEffect(Unit) {
+        authViewModel.checkLoginStatus(sharedPreferences)
+    }
+
+    // Si está logueado → sigue el contenido normal
     val screen by remember { derivedStateOf { viewModel.currentScreen } }
     var isSearching by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
@@ -200,12 +278,12 @@ fun MainAnimeScreen(
     var apkUrl by remember { mutableStateOf<String?>(null) }
     var info by remember { mutableStateOf<String?>(null) }
 
-    // Check de actualización al abrir
+    // Ocultamos la status bar y comprobamos updates
     LaunchedEffect(Unit) {
-
         WindowInsetsControllerCompat(window, window.decorView).let { controller ->
             controller.hide(WindowInsetsCompat.Type.systemBars())
-            controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            controller.systemBarsBehavior =
+                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
 
         val url = checkForUpdateFromGitHub(context)
@@ -219,110 +297,156 @@ fun MainAnimeScreen(
     val selectedAnime = viewModel.selectedAnime
     val showTopBar = screen != Screen.Ajustes && selectedAnime == null
     val showBottomBar = selectedAnime == null
+    var showLogin by remember { mutableStateOf(false) }
 
-    MainAnimeScreenContent(
-        // Top bar
-        showTopBar = showTopBar,
-        titleText = screen.name,
-        isSearching = isSearching,
-        searchQuery = searchQuery,
-        onToggleSearch = {
-            isSearching = !isSearching
-            if (!isSearching) {
-                searchQuery = ""
-                viewModel.search("")
-            }
-        },
-        onSearchQueryChange = {
-            searchQuery = it
-            viewModel.search(it)
-        },
-        searchPlaceholder = "Buscar…",
-
-        // Drawer
-        drawerItems = listOf(
-            DrawerItemUi(
-                icon = { Icon(Icons.Default.Star, contentDescription = "Mis Animes") },
-                label = "Mis Animes"
+    if (showLogin) {
+        // Si no está logueado o está forzando el login manual
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black)
+        ) {
+            LoginScreen(
+                authViewModel = authViewModel,
+                onLoginSuccess = {
+                    showLogin = false
+                    authViewModel.checkLoginStatus(sharedPreferences)
+                }
             )
-        ),
-        onDrawerItemClick = { index ->
-            when (index) {
-                0 -> viewModel.navigateTo(Screen.MisAnime)
-            }
-        },
-        drawerHeader = {
-            AsyncImage(
-                model = ImageRequest.Builder(context)
-                    .data(R.drawable.logo_a)
-                    .crossfade(true)
-                    .build(),
-                contentDescription = null,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(140.dp)
-                    .clip(RoundedCornerShape(12.dp))
-            )
-        },
-
-        // Update dialog
-        showUpdateDialog = apkUrl != null,
-        updateInfo = info,
-        onConfirmUpdate = {
-            apkUrl?.let { url -> downloadAndInstall(context, url) }
-            apkUrl = null
-        },
-        onDismissUpdate = { apkUrl = null },
-
-        // Bottom bar
-        showBottomBar = showBottomBar,
-        bottomBar = {
-            AnimeBottomBar(
-                currentScreen = screen,
-                onScreenSelected = {
-                    viewModel.navigateTo(it)
+        }
+    } else {
+        MainAnimeScreenContent(
+            // Top bar
+            showTopBar = showTopBar,
+            titleText = screen.name,
+            isSearching = isSearching,
+            searchQuery = searchQuery,
+            onToggleSearch = {
+                isSearching = !isSearching
+                if (!isSearching) {
                     searchQuery = ""
                     viewModel.search("")
                 }
-            )
-        },
+            },
+            onSearchQueryChange = {
+                searchQuery = it
+                viewModel.search(it)
+            },
+            searchPlaceholder = "Buscar…",
 
-        // Content (routing)
-        content = {
-            if (selectedAnime != null) {
-                AnimeDetailScreen(
-                    context = context,
-                    anime = selectedAnime,
-                    animeInfo = viewModel.animeInfo!!,
-                    onBack = {
-                        viewModel.animeInfo = null
-                        viewModel.selectedAnime = null
-                    },
-                    viewModel = viewModel
+            // Drawer
+            drawerItems = listOf(
+                DrawerItemUi(
+                    icon = { Icon(Icons.Default.Star, contentDescription = "Mis Animes") },
+                    label = "Mis Animes"
                 )
-            } else {
-                if (isSearching && searchQuery.isNotBlank()) {
-                    BuscarScreen(context, viewModel)
+            ),
+            onDrawerItemClick = { index ->
+                when (index) {
+                    0 -> viewModel.navigateTo(Screen.MisAnime)
+                }
+            },
+            drawerHeader = {
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(R.drawable.logo_a)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(140.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                )
+            },
+            showLoginAction = !isLoggedIn,
+            onLoginClick = {
+                showLogin = true
+            },
+            onLogoutClick = {
+                authViewModel.logout(context)
+                authViewModel.checkLoginStatus(sharedPreferences)
+            },
+
+            // Update dialog
+            showUpdateDialog = apkUrl != null,
+            updateInfo = info,
+            onConfirmUpdate = {
+                apkUrl?.let { url -> downloadAndInstall(context, url) }
+                apkUrl = null
+            },
+            onDismissUpdate = { apkUrl = null },
+
+            // Bottom bar
+            showBottomBar = showBottomBar,
+            bottomBar = {
+                AnimeBottomBar(
+                    currentScreen = screen,
+                    onScreenSelected = {
+                        viewModel.navigateTo(it)
+                        searchQuery = ""
+                        viewModel.search("")
+                    }
+                )
+            },
+            username = authViewModel.getUsername(),
+
+            // Content
+            content = {
+                if (selectedAnime != null) {
+                    AnimeDetailScreen(
+                        context = context,
+                        anime = selectedAnime,
+                        animeInfo = viewModel.animeInfo!!,
+                        onBack = {
+                            viewModel.animeInfo = null
+                            viewModel.selectedAnime = null
+                        },
+                        viewModel = viewModel,
+                        authViewModel = authViewModel
+                    )
                 } else {
-                    when (screen) {
-                        Screen.Recientes -> RecientesScreen(viewModel) { animeSearched ->
-                            viewModel.loadEpisodes(animeSearched)
-                        }
+                    if (isSearching && searchQuery.isNotBlank()) {
+                        BuscarScreen(context, viewModel)
+                    } else {
+                        when (screen) {
+                            Screen.Recientes -> RecientesScreen(viewModel) {
+                                viewModel.loadEpisodes(it)
+                            }
 
-                        Screen.Favoritos -> FavoritosScreen(viewModel)
-                        Screen.Explorar -> DirectorioScreen(context, viewModel)
-                        Screen.Temporada -> TemporadaTab(context, viewModel) { animeSearched ->
-                            viewModel.loadEpisodes(animeSearched)
-                        }
+                            Screen.Favoritos -> FavoritosScreen(viewModel, authViewModel)
+                            Screen.Explorar -> DirectorioScreen(context, viewModel)
+                            Screen.Temporada -> TemporadaTab(context, viewModel) {
+                                viewModel.loadEpisodes(it)
+                            }
 
-                        Screen.Ajustes -> AjustesScreen()
-                        Screen.MisAnime -> MyAnimeScreen(context, viewModel)
+                            Screen.Ajustes -> AjustesScreen()
+                            Screen.MisAnime -> MyAnimeScreen(context, viewModel, authViewModel)
+                        }
                     }
                 }
-            }
-        }
-    )
+
+                LaunchedEffect(isLoggedIn) {
+                    if (isLoggedIn && !authViewModel.hasSyncedOnce(context)) {
+                        viewModel.syncAllLocalAnimesToRemote(authViewModel, context)
+
+                        authViewModel.loadWatching()
+                        authViewModel.loadCompleted()
+                        authViewModel.loadPaused()
+                        authViewModel.loadFavorites(context)
+                        authViewModel.loadWatchedEpisodes(context)
+
+                        viewModel.syncAllRemoteAnimesToLocal(authViewModel, context)
+
+                        authViewModel.setSyncedOnce(context, true)
+                    }
+                }
+            },
+            context = context
+        )
+    }
 }
+
 
 // ----------------------
 // Previews
@@ -352,6 +476,9 @@ private fun MainAnimeScreenPreview_List() {
                     .background(Color(0xFF3366FF))
             )
         },
+        showLoginAction = true,
+        onLoginClick = {},
+        onLogoutClick = {},
         showUpdateDialog = false,
         updateInfo = null,
         onConfirmUpdate = {},
@@ -367,6 +494,7 @@ private fun MainAnimeScreenPreview_List() {
                 contentAlignment = Alignment.Center
             ) { Text("BottomBar") }
         },
+        username = "zeusgd19",
         content = {
             // Placeholder de contenido
             Box(
@@ -375,6 +503,7 @@ private fun MainAnimeScreenPreview_List() {
                     .background(MaterialTheme.colorScheme.background),
                 contentAlignment = Alignment.Center
             ) { Text("Contenido de la pantalla") }
-        }
+        },
+        context = LocalContext.current
     )
 }

@@ -1,6 +1,7 @@
 package com.zeusgd.AnimeFlick.ui.theme
 
 import UiState
+import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,6 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,6 +39,7 @@ import coil.compose.AsyncImage
 import com.zeusgd.AnimeFlick.FavoriteAnime
 import com.zeusgd.AnimeFlick.R
 import com.zeusgd.AnimeFlick.model.AnimeSearched
+import com.zeusgd.AnimeFlick.ui.auth.AuthViewModel
 import com.zeusgd.AnimeFlick.viewmodel.AnimeViewModel
 
 // ----------------------
@@ -125,11 +128,12 @@ fun FavoritosScreenContent(
 // Wrapper
 // ----------------------
 @Composable
-fun FavoritosScreen(viewModel: AnimeViewModel) {
+fun FavoritosScreen(viewModel: AnimeViewModel, authViewModel: AuthViewModel) {
     val context = LocalContext.current
-    val uiState by viewModel.favoritesUiState(context).collectAsState(initial = UiState.Loading)
 
     val emptyText = stringResource(R.string.no_favorite)
+
+    val uiState by viewModel.favoritesUiState(context).collectAsState(initial = UiState.Loading)
 
     when (uiState) {
         is UiState.Loading -> {
@@ -142,9 +146,9 @@ fun FavoritosScreen(viewModel: AnimeViewModel) {
         }
 
         is UiState.Success -> {
-            val favoritos = (uiState as UiState.Success).data
-            val items = remember(favoritos.animesList) {
-                favoritos.animesList.map { f ->
+            val favoritos = (uiState as UiState.Success).data.animesList
+            val items = remember(favoritos) {
+                favoritos.map { f ->
                     FavoriteItemUi(
                         title = f.title,
                         ratingText = "${f.rating}/5",
@@ -152,12 +156,13 @@ fun FavoritosScreen(viewModel: AnimeViewModel) {
                     )
                 }
             }
+
             FavoritosScreenContent(
                 items = items,
                 isLoading = false,
                 emptyMessage = emptyText,
                 onClickIndex = { idx ->
-                    favoritos.animesList.getOrNull(idx)?.let { fav ->
+                    favoritos.getOrNull(idx)?.let { fav ->
                         viewModel.loadEpisodes(fav.toAnimeSearched())
                     }
                 }
@@ -165,7 +170,6 @@ fun FavoritosScreen(viewModel: AnimeViewModel) {
         }
 
         else -> {
-            // Estado de error u otros -> muestra vacío
             FavoritosScreenContent(
                 items = emptyList(),
                 isLoading = false,
@@ -175,6 +179,7 @@ fun FavoritosScreen(viewModel: AnimeViewModel) {
         }
     }
 }
+
 
 // ----------------------
 // Helper

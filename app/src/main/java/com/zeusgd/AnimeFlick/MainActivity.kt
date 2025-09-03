@@ -10,6 +10,7 @@ import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
+import com.zeusgd.AnimeFlick.ui.auth.AuthViewModel
 import com.zeusgd.AnimeFlick.ui.visuals.AnimeFlickTheme
 
 import com.zeusgd.AnimeFlick.viewmodel.AnimeViewModel
@@ -18,6 +19,7 @@ import com.zeusgd.AnimeFlick.util.LanguageManager
 
 class MainActivity : ComponentActivity() {
     private val viewModel by viewModels<AnimeViewModel>()
+    private val authViewModel by viewModels<AuthViewModel>()
 
     override fun attachBaseContext(newBase: Context) {
         val updated = LanguageManager.applyLocale(newBase)
@@ -30,7 +32,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             AnimeFlickTheme {
-                MainAnimeScreen(this@MainActivity, viewModel, window)
+                MainAnimeScreen(this@MainActivity, viewModel, window, authViewModel)
             }
         }
 

@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import com.zeusgd.AnimeFlick.R
+import com.zeusgd.AnimeFlick.ui.auth.AuthViewModel
 
 // ------------------------------------
 //  UI Model
@@ -173,7 +174,8 @@ fun MyAnimeScreenContent(
 @Composable
 fun MyAnimeScreen(
     context: Context,
-    viewModel: AnimeViewModel
+    viewModel: AnimeViewModel,
+    authViewModel: AuthViewModel
 ) {
     val tabs = remember { listOf("Todos", "Siguiendo", "Completado", "En Pausa") }
 

@@ -25,6 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import com.zeusgd.AnimeFlick.model.Anime
 import com.zeusgd.AnimeFlick.model.AnimeSearched
+import com.zeusgd.AnimeFlick.ui.auth.AuthViewModel
 import com.zeusgd.AnimeFlick.viewmodel.AnimeViewModel
 import kotlinx.coroutines.launch
 
@@ -111,7 +112,8 @@ fun AnimeDetailScreen(
     anime: AnimeSearched,
     animeInfo: Anime,
     onBack: () -> Unit = {},
-    viewModel: AnimeViewModel
+    viewModel: AnimeViewModel,
+    authViewModel: AuthViewModel
 ) {
     val uiState by viewModel.favoritesUiState(context).collectAsState(initial = UiState.Loading)
 
@@ -126,6 +128,8 @@ fun AnimeDetailScreen(
     val tabs = remember { listOf("Información", "Episodios") }
     var selectedTab by remember { mutableIntStateOf(0) }
 
+    val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
+
     AnimeDetailScreenContent(
         title = anime.title,
         tabs = tabs,
@@ -135,17 +139,23 @@ fun AnimeDetailScreen(
         onToggleFavorite = {
             if (isFavorite) {
                 viewModel.removeFavorite(context, anime.slug)
+                if(isLoggedIn) {
+                    authViewModel.deleteFavorite(anime.slug, context)
+                }
                 Toast.makeText(context, "Eliminado de favoritos", Toast.LENGTH_SHORT).show()
             } else {
                 viewModel.addFavorite(context, anime)
+                if(isLoggedIn) {
+                    authViewModel.addFavorite(anime, context)
+                }
                 Toast.makeText(context, "Añadido a favoritos", Toast.LENGTH_SHORT).show()
             }
             // Si quieres feedback visual inmediato, puedes forzar a cambiar tab o similar aquí
             (context as? Activity)?.let { /* opcional: it.recreate() si procede */ }
         },
         onSelectTab = { selectedTab = it },
-        infoContent = { AnimeInfoTab(context, animeInfo, viewModel, anime) },
-        episodesContent = { EpisodeTab(viewModel) }
+        infoContent = { AnimeInfoTab(context, animeInfo, viewModel, authViewModel, anime) },
+        episodesContent = { EpisodeTab(viewModel, authViewModel) }
     )
 }
 

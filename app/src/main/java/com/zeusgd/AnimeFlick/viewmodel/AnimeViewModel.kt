@@ -22,12 +22,18 @@ import com.example.animeflick.datastore.followedDataStore
 import com.example.animeflick.datastore.pausedDataStore
 import com.example.animeflick.datastore.seenEpisodesDataStore
 import com.zeusgd.AnimeFlick.*
+import com.zeusgd.AnimeFlick.data.remote.SupabaseApiService
+import com.zeusgd.AnimeFlick.data.repository.AuthRepository
 import com.zeusgd.AnimeFlick.model.*
 import com.zeusgd.AnimeFlick.network.AnimeApiService
 import com.zeusgd.AnimeFlick.network.RetrofitInstance
 import com.zeusgd.AnimeFlick.network.RetrofitInstance.api
-import com.zeusgd.AnimeFlick.network.RetrofitInstance.apiVercel
 import com.zeusgd.AnimeFlick.network.RetrofitInstance.translateApi
+import com.zeusgd.AnimeFlick.ui.auth.AuthViewModel
+import com.zeusgd.AnimeFlick.ui.theme.toAnimeSearched
+import com.zeusgd.AnimeFlick.ui.theme.toAnimeSearchedCompleted
+import com.zeusgd.AnimeFlick.ui.theme.toAnimeSearchedFollowed
+import com.zeusgd.AnimeFlick.ui.theme.toAnimeSearchedPaused
 import getAiringAnimesGroupedByWeekday
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -288,7 +294,13 @@ class AnimeViewModel(
     fun addFavorite(context: Context, anime: AnimeSearched) {
         viewModelScope.launch {
             context.favoritesDataStore.updateData { current ->
-                current.toBuilder().addAnimes(anime.toProto()).build()
+                val alreadyExists = current.animesList.any { it.slug == anime.slug }
+
+                if (alreadyExists) {
+                    current // No hacer nada si ya está
+                } else {
+                    current.toBuilder().addAnimes(anime.toProto()).build()
+                }
             }
         }
     }
@@ -305,7 +317,13 @@ class AnimeViewModel(
     fun addFollowed(context: Context, anime: AnimeSearched) {
         viewModelScope.launch {
             context.followedDataStore.updateData { current ->
-                current.toBuilder().addAnimes(anime.toProtoFollowed()).build()
+                val alreadyExists = current.animesList.any { it.slug == anime.slug }
+
+                if (alreadyExists) {
+                    current // No hacer nada si ya está
+                } else {
+                    current.toBuilder().addAnimes(anime.toProtoFollowed()).build()
+                }
             }
         }
     }
@@ -322,7 +340,13 @@ class AnimeViewModel(
     fun addCompleted(context: Context, anime: AnimeSearched) {
         viewModelScope.launch {
             context.completedDataStore.updateData { current ->
-                current.toBuilder().addAnimes(anime.toProtoCompleted()).build()
+                val alreadyExists = current.animesList.any { it.slug == anime.slug }
+
+                if (alreadyExists) {
+                    current // No hacer nada si ya está
+                } else {
+                    current.toBuilder().addAnimes(anime.toProtoCompleted()).build()
+                }
             }
         }
     }
@@ -339,7 +363,13 @@ class AnimeViewModel(
     fun addPaused(context: Context, anime: AnimeSearched) {
         viewModelScope.launch {
             context.pausedDataStore.updateData { current ->
-                current.toBuilder().addAnimes(anime.toProtoPaused()).build()
+                val alreadyExists = current.animesList.any { it.slug == anime.slug }
+
+                if (alreadyExists) {
+                    current // No hacer nada si ya está
+                } else {
+                    current.toBuilder().addAnimes(anime.toProtoPaused()).build()
+                }
             }
         }
     }
@@ -380,6 +410,7 @@ class AnimeViewModel(
     suspend fun searchDirect(query: String): List<AnimeSearched> {
         return try {
             val response = api.searchAnime(query)
+            Log.e("AnimeSearch", response.toString())
             response.data.media
         } catch (e: Exception) {
             e.printStackTrace()
@@ -610,4 +641,68 @@ class AnimeViewModel(
                 return@withContext false
             }
         }
+
+    fun syncAllRemoteAnimesToLocal(authViewModel: AuthViewModel, context: Context) {
+        // 🔁 Favoritos
+        authViewModel.favorites.value?.forEach { anime ->
+            addFavorite(context, anime)
+        }
+
+        // 🔁 Siguiendo
+        authViewModel.watching.value?.forEach { anime ->
+            addFollowed(context, anime)
+        }
+
+        // 🔁 Completado
+        authViewModel.completed.value?.forEach { anime ->
+            addCompleted(context, anime)
+        }
+
+        // 🔁 En pausa
+        authViewModel.paused.value?.forEach { anime ->
+            addPaused(context, anime)
+        }
+
+        // 🔁 Episodios Vistos
+        authViewModel.watchedEpisodes.value?.forEach { animeSlug ->
+            markEpisodeSeen(context, animeSlug)
+        }
+    }
+
+    suspend fun syncAllLocalAnimesToRemote(authViewModel: AuthViewModel, context: Context) {
+            val accessToken = authViewModel.getAccessToken()
+            val refreshToken = authViewModel.getRefreshToken()
+
+            if (accessToken.isBlank() || refreshToken.isBlank()) return
+
+            // 🟡 Favoritos
+            val favData = context.favoritesDataStore.data.first()
+            favData.animesList.forEach { animeProto ->
+                authViewModel.addFavorite(animeProto.toAnimeSearched(), context)
+            }
+
+            // 🟡 Viendo
+            val watchingData = context.followedDataStore.data.first()
+            watchingData.animesList.forEach { animeProto ->
+                authViewModel.setProgress(animeProto.toAnimeSearchedFollowed(), "watching", context)
+            }
+
+            // 🟡 Completado
+            val completedData = context.completedDataStore.data.first()
+            completedData.animesList.forEach { animeProto ->
+                authViewModel.setProgress(animeProto.toAnimeSearchedCompleted(), "completed", context)
+            }
+
+            // 🟡 En pausa
+            val pausedData = context.pausedDataStore.data.first()
+            pausedData.animesList.forEach { animeProto ->
+                authViewModel.setProgress(animeProto.toAnimeSearchedPaused(), "paused", context)
+            }
+
+            // 🟡 Episodios vistos
+            val episodesData = context.seenEpisodesDataStore.data.first()
+            episodesData.episodeSlugsList.forEach { slug ->
+                authViewModel.addWatchedEpisode(slug, context)
+            }
+    }
 }
