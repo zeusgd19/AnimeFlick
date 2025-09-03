@@ -54,6 +54,13 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
     private val _showForgotPasswordScreen = MutableStateFlow(false)
     val showForgotPasswordScreen: StateFlow<Boolean> = _showForgotPasswordScreen
 
+    private val _showLoginScreen = mutableStateOf(false)
+    val showLoginScreen: State<Boolean> get() = _showLoginScreen
+
+    fun setShowLoginScreen(visible: Boolean) {
+        _showLoginScreen.value = visible
+    }
+
     fun setShowForgotPasswordScreen(show: Boolean) {
         _showForgotPasswordScreen.value = show
     }

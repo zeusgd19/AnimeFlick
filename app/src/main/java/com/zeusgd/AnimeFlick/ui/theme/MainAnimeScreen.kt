@@ -297,9 +297,10 @@ fun MainAnimeScreen(
     val selectedAnime = viewModel.selectedAnime
     val showTopBar = screen != Screen.Ajustes && selectedAnime == null
     val showBottomBar = selectedAnime == null
-    var showLogin by remember { mutableStateOf(false) }
 
-    if (showLogin) {
+    val showLoginScreen by authViewModel.showLoginScreen
+
+    if (showLoginScreen) {
         // Si no está logueado o está forzando el login manual
         Box(
             modifier = Modifier
@@ -309,8 +310,11 @@ fun MainAnimeScreen(
             LoginScreen(
                 authViewModel = authViewModel,
                 onLoginSuccess = {
-                    showLogin = false
+                    authViewModel.setShowLoginScreen(false)
                     authViewModel.checkLoginStatus(sharedPreferences)
+                },
+                onClose = {
+                    authViewModel.setShowLoginScreen(false)
                 }
             )
         }
@@ -361,7 +365,7 @@ fun MainAnimeScreen(
             },
             showLoginAction = !isLoggedIn,
             onLoginClick = {
-                showLogin = true
+                authViewModel.setShowLoginScreen(true)
             },
             onLogoutClick = {
                 authViewModel.logout(context)

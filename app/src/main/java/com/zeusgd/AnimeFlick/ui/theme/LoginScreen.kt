@@ -8,6 +8,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,6 +29,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -58,6 +61,7 @@ fun LoginScreenContent(
     onToggleMode: () -> Unit,
     onSubmit: () -> Unit,
     onForgotPassword: () -> Unit,
+    onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val gradient = Brush.verticalGradient(
@@ -70,10 +74,26 @@ fun LoginScreenContent(
             .background(gradient)
             .padding(horizontal = 24.dp, vertical = 16.dp)
     ) {
+
+        IconButton(
+            onClick = onClose,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 8.dp)
+                .zIndex(2f) // <-- por si acaso
+        ) {
+            Icon(
+                imageVector = Icons.Default.Close,
+                contentDescription = "Cerrar",
+                tint = Color.White
+            )
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(rememberScrollState())
+                .zIndex(1f),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(Modifier.height(28.dp))
@@ -275,7 +295,8 @@ fun LoginScreenContent(
 @Composable
 fun LoginScreen(
     authViewModel: AuthViewModel,
-    onLoginSuccess: () -> Unit
+    onLoginSuccess: () -> Unit,
+    onClose: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
     val ui by authViewModel.uiState.collectAsState()
@@ -333,7 +354,8 @@ fun LoginScreen(
                 onUsernameChange = { authViewModel._uiState.value = ui.copy(username = it, error = null) },
                 onForgotPassword = {
                     authViewModel.setShowForgotPasswordScreen(true)
-                }
+                },
+                onClose = { onClose() }
             )
         }
     }
@@ -357,7 +379,8 @@ fun LoginPreviewDark() {
             onToggleMode = { ui = ui.copy(isLoginMode = !ui.isLoginMode) },
             onSubmit = {},
             onUsernameChange = {},
-            onForgotPassword = {}
+            onForgotPassword = {},
+            onClose = {}
         )
     }
 }
@@ -377,7 +400,8 @@ fun RegisterPreviewLight() {
             onToggleMode = { ui = ui.copy(isLoginMode = !ui.isLoginMode) },
             onSubmit = {},
             onUsernameChange = {},
-            onForgotPassword = {}
+            onForgotPassword = {},
+            onClose = {}
         )
     }
 }
