@@ -218,12 +218,64 @@ object VideoExtractor {
         val headers: Map<String, String> = emptyMap() // Cabeceras opcionales
     )
 
+    suspend fun extractZillaNetworksVideo(url: String, context: Context): Pair<String, Map<String, String>>? =
+        withContext(Dispatchers.IO) {
+            try {
+                // La playlist está en /m3u8/{id}
+                val m3u8Url = url.replace("/play/", "/m3u8/")
+                android.util.Log.d("ZillaExtractor", "Descargando m3u8: $m3u8Url")
+
+                val client = OkHttpClient()
+                val request = Request.Builder().url(m3u8Url).build()
+                val response = client.newCall(request).execute()
+                if (!response.isSuccessful) {
+                    android.util.Log.e("ZillaExtractor", "Error al descargar m3u8: ${response.code}")
+                    return@withContext null
+                }
+                val rawM3u8 = response.body?.string() ?: return@withContext null
+                response.close()
+
+                // IMPORTANTE: Los segmentos tienen extensión .html pero son binarios TS.
+                // NO cambiamos la extensión porque .ts devuelve 404.
+                // El reproductor usará un DataSource personalizado que sobreescribe el Content-Type.
+                // Solo guardamos el m3u8 en caché tal cual.
+                val tmpFile = java.io.File(context.cacheDir, "zilla_playlist.m3u8")
+                tmpFile.writeText(rawM3u8, Charsets.UTF_8)
+                android.util.Log.d("ZillaExtractor", "M3U8 guardado en: ${tmpFile.absolutePath}")
+
+                Pair(tmpFile.toURI().toString(), emptyMap())
+            } catch (e: Exception) {
+                android.util.Log.e("ZillaExtractor", "Error extrayendo Zilla", e)
+                null
+            }
+        }
+
     suspend fun extract(server: String, embedUrl: String, context: Context): Pair<String, Map<String, String>>? {
-        return when (server.lowercase()) {
+        val serverLower = server.lowercase()
+        
+        // 1. Intentamos por el nombre explícito del servidor
+        val result = when (serverLower) {
             "yourupload" -> extractYourUploadVideo(embedUrl, context)
-            "stape" -> extractStapeVideo(embedUrl, context)
-            "sw" -> extractStreamWishVideo(embedUrl, context)
+            "stape", "streamtape" -> extractStapeVideo(embedUrl, context)
+            "sw", "streamwish" -> extractStreamWishVideo(embedUrl, context)
             "mega" -> extractMegaVideo(embedUrl)
+            "hls" -> {
+                if (embedUrl.contains("zilla-networks", ignoreCase = true)) {
+                    extractZillaNetworksVideo(embedUrl, context)
+                } else null
+            }
+            else -> null
+        }
+        
+        if (result != null) return result
+        
+        // 2. Si el nombre del servidor es genérico (ej. "TioAnime"), buscamos por el dominio de la URL
+        return when {
+            embedUrl.contains("yourupload", ignoreCase = true) -> extractYourUploadVideo(embedUrl, context)
+            embedUrl.contains("streamtape", ignoreCase = true) || embedUrl.contains("stape", ignoreCase = true) -> extractStapeVideo(embedUrl, context)
+            embedUrl.contains("streamwish", ignoreCase = true) || embedUrl.contains("strwish", ignoreCase = true) || embedUrl.contains("sw", ignoreCase = true) -> extractStreamWishVideo(embedUrl, context)
+            embedUrl.contains("mega.nz", ignoreCase = true) -> extractMegaVideo(embedUrl)
+            embedUrl.contains("zilla-networks", ignoreCase = true) -> extractZillaNetworksVideo(embedUrl, context)
             else -> null
         }
     }

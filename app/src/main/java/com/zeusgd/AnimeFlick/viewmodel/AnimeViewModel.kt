@@ -622,13 +622,17 @@ class AnimeViewModel(
                 var mp4 = VideoExtractor.extract(server, embedUrl, context)
                 var isWebView = false
                 if (mp4 == null) {
-                    if (embedUrl.contains(".m3u8") || embedUrl.contains(".mp4")) {
+                    if (embedUrl.startsWith("file://") || embedUrl.contains(".m3u8") || embedUrl.contains(".mp4")) {
+                        // Enlace directo reproducible — ExoPlayer lo maneja nativamente
                         mp4 = Pair(embedUrl, emptyMap())
                     } else {
-                        // Es probable que sea una página HTML (iframe) que ExoPlayer no soporta.
+                        // Página HTML/iframe sin extractor disponible — mostramos en WebView
                         mp4 = Pair(embedUrl, emptyMap())
                         isWebView = true
                     }
+                } else if (mp4.first.startsWith("file://")) {
+                    // El extractor devolvió una ruta local (e.g. Zilla-Networks m3u8 reescrito) — nunca WebView
+                    isWebView = false
                 }
 
                 // Eliminamos la comprobación isVideoPlayable porque a veces falla por headers o Cloudflare

@@ -16,6 +16,8 @@ import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.source.hls.HlsMediaSource
 import com.google.android.exoplayer2.ui.PlayerView
+import com.google.android.exoplayer2.upstream.DataSource
+import com.google.android.exoplayer2.upstream.DefaultDataSource
 import com.google.android.exoplayer2.upstream.DefaultHttpDataSource
 import com.google.android.exoplayer2.util.MimeTypes
 import com.zeusgd.AnimeFlick.viewmodel.AnimeViewModel
@@ -99,15 +101,22 @@ class VideoPlayerActivity : AppCompatActivity() {
                 webView.loadUrl(videoUrl)
                 showLoading(false)
             } else {
-                val isHls = videoUrl.contains(".m3u8") || videoUrl.contains("urlset") || server.equals("HLS", ignoreCase = true)
+                val isHls = videoUrl.startsWith("file:") || videoUrl.contains(".m3u8") || videoUrl.contains("urlset") || server.equals("HLS", ignoreCase = true)
 
                 val mediaItem = MediaItem.Builder()
                     .setUri(Uri.parse(videoUrl))
                     .setMimeType(if (isHls) MimeTypes.APPLICATION_M3U8 else MimeTypes.APPLICATION_MP4)
                     .build()
 
-                val dataSourceFactory = DefaultHttpDataSource.Factory().apply {
-                    setDefaultRequestProperties(headers)
+                // Si la URL es un fichero local (Zilla m3u8), usamos el DataSource personalizado
+                // que intercepta los segmentos .html y los sirve como binarios MP4/TS.
+                val dataSourceFactory: DataSource.Factory = if (videoUrl.startsWith("file:")) {
+                    ZillaDataSource.Factory(this)
+                } else {
+                    val httpFactory = DefaultHttpDataSource.Factory().apply {
+                        setDefaultRequestProperties(headers)
+                    }
+                    DefaultDataSource.Factory(this, httpFactory)
                 }
 
                 val mediaSource = if (isHls) {
@@ -147,15 +156,21 @@ class VideoPlayerActivity : AppCompatActivity() {
 
     private fun loadUrlHeaders(url: String, headers: Map<String, String>) {
         android.util.Log.d("VideoPlayerActivity", "Reproduciendo vídeo (loadUrlHeaders): URL=$url, Server=$server")
-        val isHls = url.contains(".m3u8") || url.contains("urlset") || server.equals("HLS", ignoreCase = true)
+        val isHls = url.startsWith("file:") || url.contains(".m3u8") || url.contains("urlset") || server.equals("HLS", ignoreCase = true)
 
         val mediaItem = MediaItem.Builder()
             .setUri(Uri.parse(url))
             .setMimeType(if (isHls) MimeTypes.APPLICATION_M3U8 else MimeTypes.APPLICATION_MP4)
             .build()
 
-        val dataSourceFactory = DefaultHttpDataSource.Factory().apply {
-            setDefaultRequestProperties(headers)
+        // Si la URL es un fichero local (Zilla m3u8), usamos el DataSource personalizado
+        val dataSourceFactory: DataSource.Factory = if (url.startsWith("file:")) {
+            ZillaDataSource.Factory(this)
+        } else {
+            val httpFactory = DefaultHttpDataSource.Factory().apply {
+                setDefaultRequestProperties(headers)
+            }
+            DefaultDataSource.Factory(this, httpFactory)
         }
 
         val mediaSource = if (isHls) {
