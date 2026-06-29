@@ -52,6 +52,11 @@ class AnimeViewModel(
     var selectedEpisode by mutableStateOf<Episode?>(null)
         private set
 
+    var availableServers by mutableStateOf<List<Server>?>(null)
+        private set
+    var isLoadingServers by mutableStateOf(false)
+        private set
+
     var currentScreen by mutableStateOf(
         Screen.valueOf(savedState["screen"] ?: Screen.Recientes.name)
     )
@@ -155,7 +160,7 @@ class AnimeViewModel(
         try {
             if (recentEpisodes.isEmpty()) {
                 val result = api.getRecentEpisodes()
-                recentEpisodes.addAll(result.data)
+                recentEpisodes.addAll(result.data.map { it.copy(title = it.title.applyRenames()) })
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -167,7 +172,8 @@ class AnimeViewModel(
             if (airingAnimeByDay.isEmpty()) {
                 isLoadingTemporada = true
                 val result = getAiringAnimesGroupedByWeekday()
-                airingAnimeByDay = result.mapKeys { it.key.replaceFirstChar(Char::uppercase) }
+                val renamedResult = result.mapValues { entry -> entry.value.map { it.copy(title = it.title.applyRenames()) } }
+                airingAnimeByDay = renamedResult.mapKeys { it.key.replaceFirstChar(Char::uppercase) }
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -183,10 +189,25 @@ class AnimeViewModel(
 
     fun onEpisodeSelected(episode: Episode) {
         selectedEpisode = episode
+        availableServers = null
+        isLoadingServers = true
+        viewModelScope.launch {
+            try {
+                availableServers = getEmbedPlayerEpisode(episode.slug)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                availableServers = emptyList()
+            } finally {
+                isLoadingServers = false
+            }
+        }
     }
 
     fun clearSelectedEpisode() {
         selectedEpisode = null
+        availableServers = null
+        isLoadingServers = false
+        clearVideoOptions()
     }
 
     fun navigateTo(screen: Screen) = viewModelScope.launch {
@@ -225,7 +246,7 @@ class AnimeViewModel(
                     filter = AnimeApiService.AnimeFilterRequest(types = listOf(type))
                 )
 
-                val sortedResult = result.data.media.sortedWith(
+                val sortedResult = result.data.media.map { it.copy(title = it.title.applyRenames()) }.sortedWith(
                     compareBy<AnimeSearched> {
                         val first = it.title.firstOrNull() ?: ' '
                         if (first.isLetterOrDigit()) 1 else 0
@@ -283,7 +304,7 @@ class AnimeViewModel(
             try {
                 val result = api.getRecentEpisodes()
                 recentEpisodes.clear()
-                recentEpisodes.addAll(result.data)
+                recentEpisodes.addAll(result.data.map { it.copy(title = it.title.applyRenames()) })
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -411,7 +432,7 @@ class AnimeViewModel(
         return try {
             val response = api.searchAnime(query)
             Log.e("AnimeSearch", response.toString())
-            response.data.media
+            response.data.media.map { it.copy(title = it.title.applyRenames()) }
         } catch (e: Exception) {
             e.printStackTrace()
             emptyList()
@@ -422,7 +443,7 @@ class AnimeViewModel(
         viewModelScope.launch {
             try {
                 val response = api.searchAnime(query)
-                animeList = response.data.media
+                animeList = response.data.media.map { it.copy(title = it.title.applyRenames()) }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -433,9 +454,9 @@ class AnimeViewModel(
         viewModelScope.launch {
             try {
                 val response = api.getAnimeInfo(anime.slug)
-                selectedAnime = anime
+                selectedAnime = anime.copy(title = anime.title.applyRenames())
                 episodeList = response.data.episodes
-                animeInfo = response.data
+                animeInfo = response.data.copy(title = response.data.title.applyRenames())
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -590,24 +611,35 @@ class AnimeViewModel(
                     return@launch
                 } else if (server.equals("mega", ignoreCase = true)) {
                     val mp4 = VideoExtractor.extract(server, embedUrl, context)
-                        ?: throw Exception("No se pudo extraer el enlace del vídeo")
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(mp4.first))
-                    intent.addCategory(Intent.CATEGORY_BROWSABLE)
+                        ?: throw Exception("No se pudo extraer el enlace de Mega")
+                    val intent = Intent(context, VideoPlayerActivity::class.java).apply {
+                        putExtra("VIDEO_URL", mp4.first)
+                    }
                     context.startActivity(intent)
                     return@launch
                 }
 
-                val mp4 = VideoExtractor.extract(server, embedUrl, context)
-                    ?: throw Exception("No se pudo extraer el enlace del vídeo")
+                var mp4 = VideoExtractor.extract(server, embedUrl, context)
+                var isWebView = false
+                if (mp4 == null) {
+                    if (embedUrl.contains(".m3u8") || embedUrl.contains(".mp4")) {
+                        mp4 = Pair(embedUrl, emptyMap())
+                    } else {
+                        // Es probable que sea una página HTML (iframe) que ExoPlayer no soporta.
+                        mp4 = Pair(embedUrl, emptyMap())
+                        isWebView = true
+                    }
+                }
 
-                val isPlayable = isVideoPlayable(mp4.first, mp4.second)
-                if (!isPlayable) throw Exception("El vídeo no está disponible")
+                // Eliminamos la comprobación isVideoPlayable porque a veces falla por headers o Cloudflare
+                // ExoPlayer lo manejará mejor internamente y lanzará su propio error si falla.
 
                 val intent = Intent(context, VideoPlayerActivity::class.java).apply {
                     putExtra("videoUrl", mp4.first)
                     putExtra("headers", HashMap(mp4.second))
                     putExtra("currentSlug", episodeSlug)
                     putExtra("currentServer", server)
+                    putExtra("isWebView", isWebView)
                 }
                 context.startActivity(intent)
 

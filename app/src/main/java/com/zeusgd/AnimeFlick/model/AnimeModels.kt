@@ -91,3 +91,7 @@ data class RecentEpisode(
     val cover: String,
     val number: Int
 )
+
+fun String.applyRenames(): String {
+    return this.replace("Kakkou no Iinazuke", "La gayola a mi cuco")
+}

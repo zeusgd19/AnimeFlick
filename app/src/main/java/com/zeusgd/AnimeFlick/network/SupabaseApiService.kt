@@ -33,7 +33,7 @@ interface SupabaseApiService {
     @POST("favorites/add")
     suspend fun addFavorite(@Body body: FavoriteBody, @Header("Authorization") Bearer: String): Response<FavoriteAddWrapper>
 
-    @POST("favorites/delete")
+    @HTTP(method = "DELETE", path = "favorites", hasBody = true)
     suspend fun deleteFavorite(@Body body: DeleteFavoriteBody, @Header("Authorization") Bearer: String): Response<FavoriteAddWrapper>
 
     @POST("anime/progress")
@@ -45,11 +45,17 @@ interface SupabaseApiService {
     @POST("anime/watched")
     suspend fun addWatchedEpisode(@Body body: WatchedEpisodeBody, @Header("Authorization") bearer: String): Response<WatchedEpisodeAddResponse>
 
-    @POST("anime/watched/delete")
+    @HTTP(method = "DELETE", path = "anime/watched", hasBody = true)
     suspend fun deleteWatchedEpisode(@Body body: WatchedEpisodeDeleteBody, @Header("Authorization") bearer: String): Response<WatchedEpisodeAddResponse>
 
     @GET("anime/watched")
     suspend fun getWatchedEpisodes(@Header("Authorization") bearer: String): Response<WatchedEpisodeListResponse>
+
+    @GET("anime/watched/{anime_slug}")
+    suspend fun getWatchedEpisodesByAnime(
+        @Path("anime_slug") animeSlug: String,
+        @Header("Authorization") bearer: String
+    ): Response<WatchedEpisodeListResponse>
 
     @POST("auth/reset-password")
     suspend fun resetPassword(@Body body: ResetPasswordBody): Response<ResetPasswordResponse>

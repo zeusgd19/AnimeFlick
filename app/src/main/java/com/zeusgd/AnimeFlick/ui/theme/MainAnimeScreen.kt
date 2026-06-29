@@ -126,15 +126,16 @@ fun MainAnimeScreenContent(
 
     ModalNavigationDrawer(
             drawerState = drawerState,
-            scrimColor = Color.Transparent,
+            scrimColor = Color.Black.copy(alpha = 0.5f),
             drawerContent = {
                 ModalDrawerSheet(
-                    modifier = Modifier.width(300.dp)
+                    modifier = Modifier.width(300.dp),
+                    drawerContainerColor = Color(0xFF141414)
                 ) {
                     // Header (slot)
                     Box(
                         modifier = Modifier
-                            .background(Color.Blue)
+                            .background(Color(0xFF0A0A0A))
                             .height(150.dp)
                             .fillMaxWidth()
                     ) { drawerHeader() }
@@ -148,6 +149,11 @@ fun MainAnimeScreenContent(
                                 scope.launch { drawerState.close() }
                                 onDrawerItemClick(index)
                             },
+                            colors = NavigationDrawerItemDefaults.colors(
+                                unselectedContainerColor = Color.Transparent,
+                                unselectedIconColor = Color(0xFFB3B3B3),
+                                unselectedTextColor = Color(0xFFB3B3B3)
+                            ),
                             modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                         )
                     }
@@ -165,9 +171,9 @@ fun MainAnimeScreenContent(
                                 .padding(start = 12.dp, bottom = 12.dp)
                                 .align(Alignment.Start)
                         ) {
-                            Icon(Icons.Default.Login, contentDescription = null) // pon tu icono preferido
+                            Icon(Icons.Default.Login, contentDescription = null, tint = Color.White)
                             Spacer(Modifier.width(6.dp))
-                            Text("Iniciar sesión")
+                            Text("Iniciar sesión", color = Color.White)
                         }
                     } else {
                         Row(
@@ -180,9 +186,9 @@ fun MainAnimeScreenContent(
                             Row(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(Icons.Default.Person, contentDescription = null)
+                                Icon(Icons.Default.Person, contentDescription = null, tint = Color(0xFFB3B3B3))
                                 Spacer(Modifier.width(8.dp))
-                                Text(username)
+                                Text(username, color = Color(0xFFB3B3B3))
                             }
 
                             TextButton(
@@ -191,9 +197,9 @@ fun MainAnimeScreenContent(
                                     onLogoutClick()
                                 }
                             ) {
-                                Icon(Icons.Default.Logout, contentDescription = null)
+                                Icon(Icons.Default.Logout, contentDescription = null, tint = Color(0xFFE50914))
                                 Spacer(Modifier.width(6.dp))
-                                Text("Cerrar Sesión")
+                                Text("Cerrar Sesión", color = Color(0xFFE50914))
                             }
                         }
 
@@ -202,17 +208,30 @@ fun MainAnimeScreenContent(
           }
     ) {
         Scaffold(
+            containerColor = Color(0xFF0A0A0A),
             topBar = {
                 if (showTopBar) {
                     TopAppBar(
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = Color(0xFF0A0A0A),
+                            titleContentColor = Color.White,
+                            actionIconContentColor = Color.White,
+                            navigationIconContentColor = Color.White
+                        ),
                         title = {
                             if (isSearching) {
                                 OutlinedTextField(
                                     value = searchQuery,
                                     onValueChange = onSearchQueryChange,
                                     modifier = Modifier.fillMaxWidth(),
-                                    placeholder = { Text(text = searchPlaceholder) },
-                                    singleLine = true
+                                    placeholder = { Text(text = searchPlaceholder, color = Color.Gray) },
+                                    singleLine = true,
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = Color.Transparent,
+                                        unfocusedBorderColor = Color.Transparent,
+                                        focusedTextColor = Color.White,
+                                        unfocusedTextColor = Color.White
+                                    )
                                 )
                             } else {
                                 Text(text = titleText)
@@ -221,7 +240,7 @@ fun MainAnimeScreenContent(
                         actions = {
                             IconButton(onClick = onToggleSearch) {
                                 Icon(
-                                    imageVector = Icons.Default.Search,
+                                    imageVector = if (isSearching) Icons.Default.Close else Icons.Default.Search,
                                     contentDescription = "Buscar"
                                 )
                             }
@@ -230,8 +249,7 @@ fun MainAnimeScreenContent(
                             IconButton(onClick = { scope.launch { drawerState.open() } }) {
                                 Icon(
                                     imageVector = Icons.Default.Menu,
-                                    contentDescription = "Menú",
-                                    tint = MaterialTheme.colorScheme.onSurface
+                                    contentDescription = "Menú"
                                 )
                             }
                         }
@@ -430,19 +448,24 @@ fun MainAnimeScreen(
                     }
                 }
 
+                // Sync en tiempo real: al volver al foreground, refresca si han pasado 5 min
+                val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+                DisposableEffect(lifecycleOwner, isLoggedIn) {
+                    val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+                        if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME && isLoggedIn) {
+                            authViewModel.refreshIfStale(context)
+                        }
+                    }
+                    lifecycleOwner.lifecycle.addObserver(observer)
+                    onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+                }
+
+                // Primera sync tras login
                 LaunchedEffect(isLoggedIn) {
-                    if (isLoggedIn && !authViewModel.hasSyncedOnce(context)) {
+                    if (isLoggedIn) {
                         viewModel.syncAllLocalAnimesToRemote(authViewModel, context)
-
-                        authViewModel.loadWatching()
-                        authViewModel.loadCompleted()
-                        authViewModel.loadPaused()
-                        authViewModel.loadFavorites(context)
-                        authViewModel.loadWatchedEpisodes(context)
-
+                        authViewModel.forceSync(context)
                         viewModel.syncAllRemoteAnimesToLocal(authViewModel, context)
-
-                        authViewModel.setSyncedOnce(context, true)
                     }
                 }
             },

@@ -11,6 +11,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.zeusgd.AnimeFlick.model.Episode
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.Alignment
 
 // ----------------------
 // UI Model
@@ -53,24 +56,40 @@ fun EpisodeServerDialogContent(
 // ----------------------
 @Composable
 fun EpisodeServerDialog(
-    episode: Episode,
+    servers: List<String>?,
+    isLoading: Boolean,
     onDismiss: () -> Unit,
     onSelect: (String) -> Unit
 ) {
-    val defaultServers = listOf(
-        ServerUi("YourUpload"),
-        ServerUi("Stape"),
-        ServerUi("Okru"),
-        ServerUi("SW"),
-        ServerUi("Mega")
-    )
-
-    EpisodeServerDialogContent(
-        servers = defaultServers,
-        onDismiss = onDismiss,
-        onSelect = { onSelect(it.name) },
-        title = "Elegir servidor"
-    )
+    if (isLoading) {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            confirmButton = {},
+            title = { Text("Elegir servidor") },
+            text = {
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+        )
+    } else if (servers.isNullOrEmpty()) {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            confirmButton = {},
+            title = { Text("Elegir servidor") },
+            text = { Text("No se encontraron servidores disponibles.") }
+        )
+    } else {
+        EpisodeServerDialogContent(
+            servers = servers.map { ServerUi(it) },
+            onDismiss = onDismiss,
+            onSelect = { onSelect(it.name) },
+            title = "Elegir servidor"
+        )
+    }
 }
 
 // ----------------------

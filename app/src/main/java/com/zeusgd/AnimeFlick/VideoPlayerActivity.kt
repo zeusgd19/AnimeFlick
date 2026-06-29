@@ -83,26 +83,43 @@ class VideoPlayerActivity : AppCompatActivity() {
         val headers = intent.getSerializableExtra("headers") as? HashMap<String, String> ?: hashMapOf()
 
         if (videoUrl != null) {
-            val isHls = videoUrl.contains(".m3u8") || videoUrl.contains("urlset") // puedes afinar este check
+            val isWebView = intent.getBooleanExtra("isWebView", false)
+            android.util.Log.d("VideoPlayerActivity", "Reproduciendo vídeo: URL=$videoUrl, Server=$server, isWebView=$isWebView")
 
-            val mediaItem = MediaItem.Builder()
-                .setUri(Uri.parse(videoUrl))
-                .setMimeType(if (isHls) MimeTypes.APPLICATION_M3U8 else MimeTypes.APPLICATION_MP4)
-                .build()
-
-            val dataSourceFactory = DefaultHttpDataSource.Factory().apply {
-                setDefaultRequestProperties(headers)
-            }
-
-            val mediaSource = if (isHls) {
-                HlsMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem)
+            if (isWebView) {
+                // Configurar y mostrar WebView
+                playerView.visibility = View.GONE
+                val webView = findViewById<android.webkit.WebView>(R.id.webview_player)
+                webView.visibility = View.VISIBLE
+                webView.settings.javaScriptEnabled = true
+                webView.settings.domStorageEnabled = true
+                webView.settings.mediaPlaybackRequiresUserGesture = false
+                webView.webChromeClient = android.webkit.WebChromeClient()
+                webView.webViewClient = android.webkit.WebViewClient()
+                webView.loadUrl(videoUrl)
+                showLoading(false)
             } else {
-                ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem)
-            }
+                val isHls = videoUrl.contains(".m3u8") || videoUrl.contains("urlset") || server.equals("HLS", ignoreCase = true)
 
-            player.setMediaSource(mediaSource)
-            player.prepare()
-            player.play()
+                val mediaItem = MediaItem.Builder()
+                    .setUri(Uri.parse(videoUrl))
+                    .setMimeType(if (isHls) MimeTypes.APPLICATION_M3U8 else MimeTypes.APPLICATION_MP4)
+                    .build()
+
+                val dataSourceFactory = DefaultHttpDataSource.Factory().apply {
+                    setDefaultRequestProperties(headers)
+                }
+
+                val mediaSource = if (isHls) {
+                    HlsMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem)
+                } else {
+                    ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem)
+                }
+
+                player.setMediaSource(mediaSource)
+                player.prepare()
+                player.play()
+            }
         }
     }
 
@@ -129,7 +146,8 @@ class VideoPlayerActivity : AppCompatActivity() {
     }
 
     private fun loadUrlHeaders(url: String, headers: Map<String, String>) {
-        val isHls = url.contains(".m3u8") || url.contains("urlset")
+        android.util.Log.d("VideoPlayerActivity", "Reproduciendo vídeo (loadUrlHeaders): URL=$url, Server=$server")
+        val isHls = url.contains(".m3u8") || url.contains("urlset") || server.equals("HLS", ignoreCase = true)
 
         val mediaItem = MediaItem.Builder()
             .setUri(Uri.parse(url))

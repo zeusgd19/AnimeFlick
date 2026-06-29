@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.pager.HorizontalPager
@@ -18,11 +19,16 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.zeusgd.AnimeFlick.model.Anime
 import com.zeusgd.AnimeFlick.model.AnimeSearched
 import com.zeusgd.AnimeFlick.ui.auth.AuthViewModel
@@ -64,8 +70,14 @@ fun AnimeDetailScreenContent(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.fillMaxSize().background(Color(0xFF0A0A0A))) {
         TopAppBar(
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = Color(0xFF0A0A0A),
+                titleContentColor = Color.White,
+                navigationIconContentColor = Color.White,
+                actionIconContentColor = Color.White
+            ),
             title = { Text(title) },
             navigationIcon = {
                 IconButton(onClick = onBack) {
@@ -83,12 +95,27 @@ fun AnimeDetailScreenContent(
             }
         )
 
-        TabRow(selectedTabIndex = selectedTabIndex) {
+        ScrollableTabRow(
+            selectedTabIndex = selectedTabIndex,
+            containerColor = Color(0xFF0A0A0A),
+            contentColor = Color.White,
+            edgePadding = 8.dp,
+            indicator = { tabPositions ->
+                if (selectedTabIndex < tabPositions.size) {
+                    TabRowDefaults.Indicator(
+                        Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
+                        color = Color(0xFFE50914)
+                    )
+                }
+            }
+        ) {
             tabs.forEachIndexed { index, tabTitle ->
                 Tab(
                     selected = selectedTabIndex == index,
                     onClick = { onSelectTab(index) },
-                    text = { Text(tabTitle) }
+                    text = { Text(tabTitle) },
+                    selectedContentColor = Color.White,
+                    unselectedContentColor = Color.Gray
                 )
             }
         }
@@ -129,6 +156,12 @@ fun AnimeDetailScreen(
     var selectedTab by remember { mutableIntStateOf(0) }
 
     val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
+
+    LaunchedEffect(anime.slug, isLoggedIn) {
+        if (isLoggedIn) {
+            authViewModel.loadWatchedEpisodesForAnime(anime.slug, context)
+        }
+    }
 
     AnimeDetailScreenContent(
         title = anime.title,

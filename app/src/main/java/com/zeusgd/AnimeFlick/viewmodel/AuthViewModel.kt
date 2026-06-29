@@ -11,14 +11,22 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.animeflick.datastore.completedDataStore
 import com.example.animeflick.datastore.favoritesDataStore
 import com.example.animeflick.datastore.followedDataStore
 import com.example.animeflick.datastore.pausedDataStore
 import com.example.animeflick.datastore.seenEpisodesDataStore
+import com.zeusgd.AnimeFlick.CompletedAnimes
+import com.zeusgd.AnimeFlick.FavoriteAnimes
+import com.zeusgd.AnimeFlick.FollowedAnimes
+import com.zeusgd.AnimeFlick.PausedAnimes
+import com.zeusgd.AnimeFlick.SeenEpisodes
 import com.zeusgd.AnimeFlick.data.repository.AuthRepository
 import com.zeusgd.AnimeFlick.model.AnimeSearched
+import com.zeusgd.AnimeFlick.model.toProto
+import com.zeusgd.AnimeFlick.model.toProtoCompleted
+import com.zeusgd.AnimeFlick.model.toProtoFollowed
+import com.zeusgd.AnimeFlick.model.toProtoPaused
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -57,6 +65,11 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
     private val _showLoginScreen = mutableStateOf(false)
     val showLoginScreen: State<Boolean> get() = _showLoginScreen
 
+    // ---- Sync timing ----
+    private var lastSyncedAt: Long = 0L
+    private val syncIntervalMs: Long = 5 * 60 * 1000L // 5 minutos
+    private var isSyncing = false
+
     fun setShowLoginScreen(visible: Boolean) {
         _showLoginScreen.value = visible
     }
@@ -65,20 +78,9 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
         _showForgotPasswordScreen.value = show
     }
 
-
     fun checkLoginStatus(sharedPreferences: SharedPreferences) {
         val token = sharedPreferences.getString("access_token", null)
         _isLoggedIn.value = token != null
-    }
-
-    fun setSyncedOnce(context: Context, value: Boolean) {
-        val prefs = context.getSharedPreferences("sync_prefs", Context.MODE_PRIVATE)
-        prefs.edit().putBoolean("synced_once", value).apply()
-    }
-
-    fun hasSyncedOnce(context: Context): Boolean {
-        val prefs = context.getSharedPreferences("sync_prefs", Context.MODE_PRIVATE)
-        return prefs.getBoolean("synced_once", false)
     }
 
     fun setLoggedIn(value: Boolean) {
@@ -97,7 +99,7 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun getUsername(): String {
-        return repo.getUsername().toString();
+        return repo.getUsername().toString()
     }
 
     fun getUserId(): String {
@@ -111,6 +113,185 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
     fun getRefreshToken(): String {
         return repo.getRefreshToken().toString()
     }
+
+    // ---- Sync periódico ----
+
+    /**
+     * Refresca los datos del servidor si han pasado más de 5 minutos
+     * desde la última sincronización. Llamar al volver al foreground.
+     */
+    fun refreshIfStale(context: Context) {
+        if (!_isLoggedIn.value) return
+        if (isSyncing) return
+
+        val now = System.currentTimeMillis()
+        if (now - lastSyncedAt < syncIntervalMs && lastSyncedAt != 0L) return
+
+        isSyncing = true
+        viewModelScope.launch {
+            try {
+                loadAllFromServer(context)
+                lastSyncedAt = System.currentTimeMillis()
+            } catch (e: Exception) {
+                Log.e("AuthVM", "Error en refreshIfStale", e)
+            } finally {
+                isSyncing = false
+            }
+        }
+    }
+
+    /**
+     * Fuerza una sincronización completa sin importar el tiempo.
+     * Se usa tras el primer login.
+     */
+    fun forceSync(context: Context) {
+        if (!_isLoggedIn.value) return
+        if (isSyncing) return
+
+        isSyncing = true
+        viewModelScope.launch {
+            try {
+                loadAllFromServer(context)
+                lastSyncedAt = System.currentTimeMillis()
+            } catch (e: Exception) {
+                Log.e("AuthVM", "Error en forceSync", e)
+            } finally {
+                isSyncing = false
+            }
+        }
+    }
+
+    /**
+     * Carga todos los datos del servidor y los escribe al DataStore local.
+     */
+    private suspend fun loadAllFromServer(context: Context) {
+        kotlinx.coroutines.coroutineScope {
+            // Cargar todo en paralelo usando coroutines
+            launch { loadFavoritesAndSync(context) }
+            launch { loadWatchingAndSync(context) }
+            launch { loadCompletedAndSync(context) }
+            launch { loadPausedAndSync(context) }
+            launch { loadWatchedEpisodesAndSync(context) }
+        }
+    }
+
+    // ---- Load + Sync to DataStore ----
+
+    private suspend fun loadFavoritesAndSync(context: Context) {
+        val accessToken = getAccessToken()
+        val refreshToken = getRefreshToken()
+
+        val result = repo.getFavorites(accessToken, refreshToken, context)
+        result.onSuccess { animes ->
+            _favorites.value = animes
+            // Merge al DataStore local
+            context.favoritesDataStore.updateData { current ->
+                current.toBuilder()
+                    .clearAnimes()
+                    .addAllAnimes(animes.map { it.toProto() })
+                    .build()
+            }
+        }.onFailure {
+            Log.e("Favorites", "Error al obtener favoritos", it)
+        }
+    }
+
+    private suspend fun loadWatchingAndSync(context: Context) {
+        val accessToken = getAccessToken()
+        val refreshToken = getRefreshToken()
+
+        val result = repo.getProgressAnimes("viendo", accessToken, refreshToken)
+        result.onSuccess { animes ->
+            _watching.value = animes
+            context.followedDataStore.updateData { current ->
+                current.toBuilder()
+                    .clearAnimes()
+                    .addAllAnimes(animes.map { it.toProtoFollowed() })
+                    .build()
+            }
+        }.onFailure {
+            Log.e("Watching", "Error al obtener animes viendo", it)
+        }
+    }
+
+    private suspend fun loadCompletedAndSync(context: Context) {
+        val accessToken = getAccessToken()
+        val refreshToken = getRefreshToken()
+
+        val result = repo.getProgressAnimes("completado", accessToken, refreshToken)
+        result.onSuccess { animes ->
+            _completed.value = animes
+            context.completedDataStore.updateData { current ->
+                current.toBuilder()
+                    .clearAnimes()
+                    .addAllAnimes(animes.map { it.toProtoCompleted() })
+                    .build()
+            }
+        }.onFailure {
+            Log.e("Completed", "Error al obtener animes completados", it)
+        }
+    }
+
+    private suspend fun loadPausedAndSync(context: Context) {
+        val accessToken = getAccessToken()
+        val refreshToken = getRefreshToken()
+
+        val result = repo.getProgressAnimes("en pausa", accessToken, refreshToken)
+        result.onSuccess { animes ->
+            _paused.value = animes
+            context.pausedDataStore.updateData { current ->
+                current.toBuilder()
+                    .clearAnimes()
+                    .addAllAnimes(animes.map { it.toProtoPaused() })
+                    .build()
+            }
+        }.onFailure {
+            Log.e("Paused", "Error al obtener animes en pausa", it)
+        }
+    }
+
+    private suspend fun loadWatchedEpisodesAndSync(context: Context) {
+        val accessToken = getAccessToken()
+        val refreshToken = getRefreshToken()
+
+        val result = repo.getWatchedEpisodes(accessToken, refreshToken)
+        result.onSuccess { list ->
+            _watchedEpisodes.value = list
+            context.seenEpisodesDataStore.updateData { current ->
+                current.toBuilder()
+                    .clearEpisodeSlugs()
+                    .addAllEpisodeSlugs(list)
+                    .build()
+            }
+        }.onFailure {
+            Log.e("Watched", "Error al obtener episodios vistos", it)
+        }
+    }
+
+    suspend fun loadWatchedEpisodesForAnime(animeSlug: String, context: Context) {
+        val accessToken = getAccessToken()
+        val refreshToken = getRefreshToken()
+
+        val result = repo.getWatchedEpisodesByAnime(animeSlug, accessToken, refreshToken)
+        result.onSuccess { list ->
+            context.seenEpisodesDataStore.updateData { current ->
+                // Mantenemos todos los episodios que NO son de este anime, 
+                // y agregamos la lista fresca del servidor para ESTE anime.
+                // Generalmente los slugs de episodios son "animeSlug-episodio-X"
+                val updatedSlugs = current.episodeSlugsList.filterNot { it.startsWith("$animeSlug-") }.toMutableList()
+                updatedSlugs.addAll(list)
+
+                current.toBuilder()
+                    .clearEpisodeSlugs()
+                    .addAllEpisodeSlugs(updatedSlugs)
+                    .build()
+            }
+        }.onFailure {
+            Log.e("Watched", "Error al obtener episodios vistos para $animeSlug", it)
+        }
+    }
+
+    // ---- Auth actions ----
 
     fun signUp(email: String, password: String, displayName: String) {
         viewModelScope.launch {
@@ -144,67 +325,62 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ---- Favorites (remote) ----
+
     fun loadFavorites(context: Context) {
         viewModelScope.launch {
-            val accessToken = getAccessToken()
-            val refreshToken = getRefreshToken()
-
-            val result = repo.getFavorites(accessToken, refreshToken, context)
-            result.onSuccess { animes ->
-                _favorites.value = animes
-            }.onFailure {
-                Log.e("Favorites", "Error al obtener favoritos", it)
-                Toast.makeText(context, "Error al obtener favoritos", Toast.LENGTH_SHORT).show()
-            }
+            loadFavoritesAndSync(context)
         }
     }
-    fun addFavorite(anime: AnimeSearched, context: Context){
+
+    fun addFavorite(anime: AnimeSearched, context: Context) {
         viewModelScope.launch {
             val accessToken = getAccessToken()
             val refreshToken = getRefreshToken()
 
-            val result = repo.addFavorite(anime, accessToken,refreshToken, context)
+            val result = repo.addFavorite(anime, accessToken, refreshToken, context)
             result.onSuccess {
                 Log.d("Favorites", "Favorito añadido correctamente")
             }.onFailure {
                 Log.e("Favorites", "Error al añadir favorito", it)
                 Toast.makeText(context, "Error al añadir favorito", Toast.LENGTH_SHORT).show()
             }
-
         }
     }
 
-    fun deleteFavorite(animeSlug: String, context: Context){
+    fun deleteFavorite(animeSlug: String, context: Context) {
         viewModelScope.launch {
             val accessToken = getAccessToken()
             val refreshToken = getRefreshToken()
 
-            val result = repo.deleteFavorite(animeSlug, accessToken,refreshToken, context)
+            val result = repo.deleteFavorite(animeSlug, accessToken, refreshToken, context)
             result.onSuccess {
                 Log.d("Delete Favorites", "Favorito eliminado correctamente")
             }.onFailure {
-                Log.e("Delete Favorites", "Error al añadir favorito", it)
-                Toast.makeText(context, "Error al añadir favorito", Toast.LENGTH_SHORT).show()
+                Log.e("Delete Favorites", "Error al eliminar favorito", it)
+                Toast.makeText(context, "Error al eliminar favorito", Toast.LENGTH_SHORT).show()
             }
-
         }
     }
 
-    fun setProgress(anime: AnimeSearched,status: String, context: Context){
+    // ---- Progress (remote) ----
+
+    fun setProgress(anime: AnimeSearched, status: String, context: Context) {
         viewModelScope.launch {
             val accessToken = getAccessToken()
             val refreshToken = getRefreshToken()
 
-            val result = repo.setAnimeProgress(anime, status, accessToken,refreshToken, context)
+            val result = repo.setAnimeProgress(anime, status, accessToken, refreshToken, context)
             result.onSuccess {
                 Log.d("Progress", "Anime añadido correctamente")
             }.onFailure {
                 Log.e("Progress", "Error al añadir progreso", it)
                 Toast.makeText(context, "Error al añadir progreso", Toast.LENGTH_SHORT).show()
             }
-
         }
     }
+
+    // ---- Watched episodes (remote) ----
 
     fun addWatchedEpisode(episodeSlug: String, context: Context) {
         viewModelScope.launch {
@@ -236,6 +412,8 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ---- Password reset ----
+
     fun resetPassword(
         email: String,
         onSuccess: () -> Unit,
@@ -259,55 +437,7 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    suspend fun loadWatchedEpisodes(context: Context) {
-            val accessToken = getAccessToken()
-            val refreshToken = getRefreshToken()
-
-            val result = repo.getWatchedEpisodes(accessToken, refreshToken)
-            result.onSuccess { list ->
-                _watchedEpisodes.value = list
-            }.onFailure {
-                Log.e("Watched", "Error al obtener episodios vistos", it)
-                Toast.makeText(context, "Error al cargar episodios vistos", Toast.LENGTH_SHORT).show()
-            }
-    }
-
-
-    suspend fun loadWatching() {
-            val accessToken = getAccessToken()
-            val refreshToken = getRefreshToken()
-
-            val result = repo.getProgressAnimes("viendo", accessToken, refreshToken)
-            result.onSuccess { animes ->
-                _watching.value = animes
-            }.onFailure {
-                Log.e("Watching", "Error al obtener animes viendo", it)
-            }
-    }
-
-    suspend fun loadCompleted() {
-            val accessToken = getAccessToken()
-            val refreshToken = getRefreshToken()
-
-            val result = repo.getProgressAnimes("completado", accessToken, refreshToken)
-            result.onSuccess { animes ->
-                _completed.value = animes
-            }.onFailure {
-                Log.e("Completed", "Error al obtener animes completados", it)
-            }
-    }
-
-    suspend fun loadPaused() {
-            val accessToken = getAccessToken()
-            val refreshToken = getRefreshToken()
-
-            val result = repo.getProgressAnimes("en pausa", accessToken, refreshToken)
-            result.onSuccess { animes ->
-                _paused.value = animes
-            }.onFailure {
-                Log.e("Paused", "Error al obtener animes en pausa", it)
-            }
-    }
+    // ---- Logout ----
 
     fun logout(context: Context) {
         repo.logout()
@@ -321,8 +451,13 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
             context.seenEpisodesDataStore.updateData { it.toBuilder().clearEpisodeSlugs().build() }
         }
 
-        val prefs = context.getSharedPreferences("sync_prefs", Context.MODE_PRIVATE)
-        prefs.edit().putBoolean("synced_once", false).apply()
+        // Reset sync state
+        lastSyncedAt = 0L
+        _favorites.value = emptyList()
+        _watching.value = emptyList()
+        _completed.value = emptyList()
+        _paused.value = emptyList()
+        _watchedEpisodes.value = emptyList()
     }
 
     fun setShowVerifyEmailScreen(value: Boolean) {

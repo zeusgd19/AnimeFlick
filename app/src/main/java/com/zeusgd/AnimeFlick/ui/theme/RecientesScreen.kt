@@ -3,9 +3,11 @@ package com.zeusgd.AnimeFlick.ui.theme
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -47,14 +49,14 @@ fun RecientesScreenContent(
         onRefresh = onRefresh
     ) {
         Box(modifier = modifier.fillMaxSize()) {
-            LazyColumn(
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
                 modifier = Modifier.fillMaxSize(),
-                state = listState,
-                contentPadding = PaddingValues(vertical = 4.dp),
+                contentPadding = PaddingValues(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                itemsIndexed(episodes, key = { _, it -> it.title + it.number }) { index, ep ->
-                    // Convertimos a RecentEpisodeUi (del item) justo aquí
+                items(episodes, key = { it.title + it.number }) { ep ->
                     RecentEpisodeItem(
                         episode = ep.toRecentEpisode(),
                         isLoading = isLoadingEpisode,
@@ -122,7 +124,8 @@ fun RecientesScreen(
     }
     selectedEpisode?.let { episode ->
         EpisodeServerDialog(
-            episode = episode,
+            servers = viewModel.availableServers?.map { it.name },
+            isLoading = viewModel.isLoadingServers,
             onDismiss = { viewModel.clearSelectedEpisode() },
             onSelect = { server ->
                 viewModel.clearSelectedEpisode()

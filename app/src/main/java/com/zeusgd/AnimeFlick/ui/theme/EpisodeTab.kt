@@ -64,7 +64,8 @@ fun EpisodeTabContent(
     onToggleOrder: () -> Unit,
     onClickEpisode: (index: Int) -> Unit,
     serverDialogIndex: Int?,                 // índice del episodio con diálogo abierto; null si cerrado
-    servers: List<String>,
+    servers: List<String>?,
+    isLoadingServers: Boolean,
     onSelectServer: (server: String) -> Unit,
     onDismissServerDialog: () -> Unit,
     videoOptions: List<String>?,             // null = cerrado; lista = abierto
@@ -151,15 +152,28 @@ fun EpisodeTabContent(
                     confirmButton = {},
                     title = { Text("Elegir servidor") },
                     text = {
-                        Column {
-                            servers.forEach { server ->
-                                Button(
-                                    onClick = { onSelectServer(server) },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 4.dp)
-                                ) {
-                                    Text(server)
+                        if (isLoadingServers) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(24.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
+                        } else if (servers.isNullOrEmpty()) {
+                            Text("No se encontraron servidores disponibles.")
+                        } else {
+                            Column {
+                                servers.forEach { server ->
+                                    Button(
+                                        onClick = { onSelectServer(server) },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 4.dp)
+                                    ) {
+                                        Text(server)
+                                    }
                                 }
                             }
                         }
@@ -254,7 +268,8 @@ fun EpisodeTab(viewModel: AnimeViewModel, authViewModel: AuthViewModel) {
             }
         },
         serverDialogIndex = serverDialogIndex,
-        servers = listOf("YourUpload", "Stape", "Okru", "SW", "Mega"),
+        servers = viewModel.availableServers?.map { it.name },
+        isLoadingServers = viewModel.isLoadingServers,
         onSelectServer = { server ->
             viewModel.clearSelectedEpisode()
             // Dispara la carga de opciones de vídeo para ese server
@@ -298,6 +313,7 @@ fun EpisodeTabPreview_Normal() {
         onClickEpisode = {},
         serverDialogIndex = null,
         servers = listOf("YourUpload", "Stape", "Okru", "SW", "Mega"),
+        isLoadingServers = false,
         onSelectServer = {},
         onDismissServerDialog = {},
         videoOptions = null,
@@ -323,6 +339,7 @@ fun EpisodeTabPreview_Loading_Dialogs() {
         onClickEpisode = {},
         serverDialogIndex = 1,
         servers = listOf("YourUpload", "Stape", "Okru", "SW", "Mega"),
+        isLoadingServers = false,
         onSelectServer = {},
         onDismissServerDialog = {},
         videoOptions = listOf("1080p", "720p", "480p"),

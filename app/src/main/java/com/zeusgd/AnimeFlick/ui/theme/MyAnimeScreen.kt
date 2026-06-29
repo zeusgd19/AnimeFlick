@@ -5,8 +5,11 @@ import android.annotation.SuppressLint
 import android.content.Context
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -106,47 +109,48 @@ fun MyAnimeScreenContent(
                             Text(emptyMessage, style = MaterialTheme.typography.bodyLarge)
                         }
                     } else {
-                        LazyColumn(
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(3),
                             modifier = Modifier
                                 .fillMaxSize()
                                 .padding(horizontal = 12.dp, vertical = 8.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             itemsIndexed(list) { index, item ->
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clickable { onClickItem(page, index) },
-                                    shape = RoundedCornerShape(12.dp),
-                                    elevation = CardDefaults.cardElevation(6.dp)
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = CardDefaults.cardColors(containerColor = Color.Transparent)
                                 ) {
-                                    Row(Modifier.padding(12.dp)) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                         AsyncImage(
                                             model = item.coverUrl,
                                             contentDescription = item.title,
-                                            modifier = Modifier
-                                                .size(90.dp)
-                                                .clip(RoundedCornerShape(10.dp))
-                                        )
-                                        Spacer(Modifier.width(12.dp))
-                                        Column(
+                                            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .align(Alignment.CenterVertically)
-                                        ) {
+                                                .aspectRatio(3f/4f)
+                                                .clip(RoundedCornerShape(8.dp))
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = item.title,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            maxLines = 2,
+                                            color = Color.White,
+                                            modifier = Modifier.padding(horizontal = 4.dp),
+                                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                        )
+                                        item.ratingText?.let {
                                             Text(
-                                                item.title,
-                                                style = MaterialTheme.typography.titleMedium,
-                                                maxLines = 2
+                                                text = it,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = Color.Gray
                                             )
-                                            Spacer(Modifier.height(4.dp))
-                                            item.ratingText?.let {
-                                                Text(
-                                                    it,
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = Color.Gray
-                                                )
-                                            }
                                         }
                                     }
                                 }

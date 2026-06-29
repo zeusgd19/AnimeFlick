@@ -6,7 +6,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 object RetrofitInstance {
-    private const val BASE_URL = "https://animeflv.ahmedrangel.com/"
+    private const val BASE_URL = "https://animeflick.com/"
     private const val BASE_URL2 = "https://zeusgd19.pythonanywhere.com/"
 
     val api: AnimeApiService by lazy {

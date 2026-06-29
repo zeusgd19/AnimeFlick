@@ -12,9 +12,11 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -43,6 +45,8 @@ fun AnimeBottomBarContent(
         modifier = modifier
             .fillMaxWidth()
             .navigationBarsPadding(),
+        containerColor = Color(0xFF0A0A0A), // Dark Web Background
+        contentColor = Color(0xFFB3B3B3), // Web OnSurface
         tonalElevation = 0.dp
     ) {
         items.forEachIndexed { index, item ->
@@ -53,16 +57,24 @@ fun AnimeBottomBarContent(
                     Icon(
                         imageVector = item.icon,
                         contentDescription = item.label,
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 },
                 label = {
                     Text(
                         text = item.label,
-                        fontSize = 11.sp
+                        fontSize = 11.sp,
+                        fontWeight = if (index == selectedIndex) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal
                     )
                 },
-                alwaysShowLabel = true
+                alwaysShowLabel = true,
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = Color.White,
+                    selectedTextColor = Color.White,
+                    indicatorColor = Color(0xFFE50914).copy(alpha = 0.2f), // Subtle red accent
+                    unselectedIconColor = Color(0xFFB3B3B3),
+                    unselectedTextColor = Color(0xFFB3B3B3)
+                )
             )
         }
     }

@@ -479,6 +479,57 @@ class AuthRepository(private val prefs: SharedPreferences) {
         }
     }
 
+    suspend fun getWatchedEpisodesByAnime(
+        animeSlug: String,
+        accessToken: String,
+        refreshToken: String
+    ): Result<List<String>> = withContext(Dispatchers.IO) {
+        try {
+            val response = api.getWatchedEpisodesByAnime(animeSlug, "Bearer $accessToken")
+
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null) {
+                    Result.success(body.episodes)
+                } else {
+                    Result.failure(Exception("Respuesta vacía"))
+                }
+            } else {
+                val error = response.errorBody()?.string()
+                if (error?.contains("token is invalid") == true || error?.contains("bad_jwt") == true) {
+                    val refreshResult = refreshToken(refreshToken)
+                    if (refreshResult.isSuccess) {
+                        val newTokens = refreshResult.getOrNull()!!
+                        saveTokens(
+                            newTokens.access_token,
+                            newTokens.refresh_token,
+                            newTokens.user?.id ?: "",
+                            newTokens.user?.user_metadata?.display_name ?: "User"
+                        )
+
+                        val retryResponse = api.getWatchedEpisodesByAnime(animeSlug, "Bearer ${newTokens.access_token}")
+                        if (retryResponse.isSuccessful) {
+                            val retryBody = retryResponse.body()
+                            if (retryBody != null) {
+                                Result.success(retryBody.episodes)
+                            } else {
+                                Result.failure(Exception("Respuesta vacía tras retry"))
+                            }
+                        } else {
+                            Result.failure(Exception(retryResponse.errorBody()?.string() ?: "Error al reintentar con nuevo token"))
+                        }
+                    } else {
+                        Result.failure(Exception("Token expirado y no se pudo renovar"))
+                    }
+                } else {
+                    Result.failure(Exception(error ?: "Error al obtener episodios vistos para $animeSlug"))
+                }
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
 
     suspend fun resetPassword(email: String): Result<SupabaseApiService.ResetPasswordResponse> = withContext(Dispatchers.IO) {
         try {

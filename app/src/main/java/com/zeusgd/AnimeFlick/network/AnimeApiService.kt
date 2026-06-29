@@ -19,7 +19,7 @@ interface AnimeApiService {
     @GET("api/anime/{slug}")
     suspend fun getAnimeInfo(@Path("slug") slug: String): AnimeInfoResponse
 
-    @GET("api/list/latest-episodes")
+    @GET("api/latest-episodes")
     suspend fun getRecentEpisodes(): AnimeRecentEpisodesResponse
 
     @GET("api/anime/episode/{slug}")

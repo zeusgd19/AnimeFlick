@@ -1,53 +1,33 @@
 package com.zeusgd.AnimeFlick.ui.visuals
 
-import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
-import com.zeusgd.AnimeFlick.util.ThemeManager
+import androidx.compose.ui.graphics.Color
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
-)
-
-private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+    primary = Primary,
+    background = Background,
+    surface = Surface,
+    surfaceVariant = SurfaceVariant,
+    onBackground = OnBackground,
+    onSurface = OnSurface,
+    onSurfaceVariant = OnSurfaceVariant,
+    
+    // We override everything to ensure the web-like dark mode is always applied
+    secondary = Color(0xFF03DAC6),
+    onPrimary = Color.Black,
+    onSecondary = Color.Black,
+    error = Color(0xFFCF6679),
+    onError = Color.Black
 )
 
 @Composable
 fun AnimeFlickTheme(
     content: @Composable () -> Unit
 ) {
-    val context = LocalContext.current
-    val preference = ThemeManager.isDarkModeSet(context)
-    val darkTheme = preference ?: isSystemInDarkTheme()
-
-    val colorScheme = when {
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
+    // Forzamos el tema oscuro sin Material You dynamic colors para igualar la web
+    val colorScheme = DarkColorScheme
 
     MaterialTheme(
         colorScheme = colorScheme,
