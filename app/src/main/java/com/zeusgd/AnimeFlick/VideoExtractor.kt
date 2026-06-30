@@ -259,6 +259,7 @@ object VideoExtractor {
             "stape", "streamtape" -> extractStapeVideo(embedUrl, context)
             "sw", "streamwish" -> extractStreamWishVideo(embedUrl, context)
             "mega" -> extractMegaVideo(embedUrl)
+            "upnshare", "upn" -> null // Forzamos el fallback al WebView visible "Sandboxed"
             "hls" -> {
                 if (embedUrl.contains("zilla-networks", ignoreCase = true)) {
                     extractZillaNetworksVideo(embedUrl, context)
@@ -276,6 +277,7 @@ object VideoExtractor {
             embedUrl.contains("streamwish", ignoreCase = true) || embedUrl.contains("strwish", ignoreCase = true) || embedUrl.contains("sw", ignoreCase = true) -> extractStreamWishVideo(embedUrl, context)
             embedUrl.contains("mega.nz", ignoreCase = true) -> extractMegaVideo(embedUrl)
             embedUrl.contains("zilla-networks", ignoreCase = true) -> extractZillaNetworksVideo(embedUrl, context)
+            embedUrl.contains("uns.bio", ignoreCase = true) || embedUrl.contains("upnshare", ignoreCase = true) -> null // Fallback a WebView visible
             else -> null
         }
     }

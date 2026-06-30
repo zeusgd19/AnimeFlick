@@ -613,7 +613,8 @@ class AnimeViewModel(
                     val mp4 = VideoExtractor.extract(server, embedUrl, context)
                         ?: throw Exception("No se pudo extraer el enlace de Mega")
                     val intent = Intent(context, VideoPlayerActivity::class.java).apply {
-                        putExtra("VIDEO_URL", mp4.first)
+                        putExtra("videoUrl", mp4.first)
+                        putExtra("isWebView", false)
                     }
                     context.startActivity(intent)
                     return@launch

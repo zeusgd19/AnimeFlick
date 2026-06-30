@@ -93,43 +93,99 @@ class VideoPlayerActivity : AppCompatActivity() {
                 playerView.visibility = View.GONE
                 val webView = findViewById<android.webkit.WebView>(R.id.webview_player)
                 webView.visibility = View.VISIBLE
-                webView.settings.javaScriptEnabled = true
-                webView.settings.domStorageEnabled = true
-                webView.settings.mediaPlaybackRequiresUserGesture = false
+                
+                webView.settings.apply {
+                    javaScriptEnabled = true
+                    domStorageEnabled = true
+                    mediaPlaybackRequiresUserGesture = false
+                    setSupportMultipleWindows(false) // Bloquea popups (window.open)
+                    userAgentString = "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36"
+                }
+                
                 webView.webChromeClient = android.webkit.WebChromeClient()
-                webView.webViewClient = android.webkit.WebViewClient()
+                webView.webViewClient = object : android.webkit.WebViewClient() {
+                    
+                    // Bloquear redirecciones (ads que cambian la página actual)
+                    override fun shouldOverrideUrlLoading(view: android.webkit.WebView?, request: android.webkit.WebResourceRequest?): Boolean {
+                        val url = request?.url?.toString() ?: return false
+                        // Si intenta navegar a una URL distinta a la original, la bloqueamos
+                        if (url != videoUrl && !url.contains(Uri.parse(videoUrl).host ?: "")) {
+                            android.util.Log.d("VideoPlayerActivity", "Bloqueada redirección a: $url")
+                            return true // true = bloqueado
+                        }
+                        return false
+                    }
+
+                    // Interceptar peticiones para cazar el m3u8 cuando el usuario le dé a Play
+                    override fun shouldInterceptRequest(
+                        view: android.webkit.WebView,
+                        request: android.webkit.WebResourceRequest
+                    ): android.webkit.WebResourceResponse? {
+                        val url = request.url.toString()
+                        
+                        if (url.contains(".m3u8") || (url.contains(".mp4") && url.contains("download"))) {
+                            android.util.Log.d("VideoPlayerActivity", "✅ Video cazado por el usuario: $url")
+                            
+                            val referer = request.requestHeaders["Referer"] ?: videoUrl
+                            val extractedHeaders = mapOf(
+                                "Referer" to referer,
+                                "User-Agent" to "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36"
+                            )
+                            
+                            // Cambiamos al hilo principal para actualizar la UI y arrancar ExoPlayer
+                            runOnUiThread {
+                                // Destruimos el contenido del WebView para que pare de sonar y no consuma internet
+                                view.evaluateJavascript("document.querySelectorAll('video').forEach(v => v.pause());", null)
+                                view.loadUrl("about:blank")
+                                
+                                // Ocultar WebView y mostrar ExoPlayer
+                                webView.visibility = View.GONE
+                                playerView.visibility = View.VISIBLE
+                                
+                                // Arrancar ExoPlayer
+                                playVideoInExoPlayer(url, extractedHeaders, server)
+                            }
+                            
+                            // Bloquear la petición en el WebView para que no consuma datos duplicados
+                            return android.webkit.WebResourceResponse("text/plain", "UTF-8", null)
+                        }
+                        return null
+                    }
+                }
                 webView.loadUrl(videoUrl)
                 showLoading(false)
             } else {
-                val isHls = videoUrl.startsWith("file:") || videoUrl.contains(".m3u8") || videoUrl.contains("urlset") || server.equals("HLS", ignoreCase = true)
-
-                val mediaItem = MediaItem.Builder()
-                    .setUri(Uri.parse(videoUrl))
-                    .setMimeType(if (isHls) MimeTypes.APPLICATION_M3U8 else MimeTypes.APPLICATION_MP4)
-                    .build()
-
-                // Si la URL es un fichero local (Zilla m3u8), usamos el DataSource personalizado
-                // que intercepta los segmentos .html y los sirve como binarios MP4/TS.
-                val dataSourceFactory: DataSource.Factory = if (videoUrl.startsWith("file:")) {
-                    ZillaDataSource.Factory(this)
-                } else {
-                    val httpFactory = DefaultHttpDataSource.Factory().apply {
-                        setDefaultRequestProperties(headers)
-                    }
-                    DefaultDataSource.Factory(this, httpFactory)
-                }
-
-                val mediaSource = if (isHls) {
-                    HlsMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem)
-                } else {
-                    ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem)
-                }
-
-                player.setMediaSource(mediaSource)
-                player.prepare()
-                player.play()
+                playVideoInExoPlayer(videoUrl, headers, server)
             }
         }
+    }
+    
+    private fun playVideoInExoPlayer(videoUrl: String, headers: Map<String, String>, server: String) {
+        val isHls = videoUrl.startsWith("file:") || videoUrl.contains(".m3u8") || videoUrl.contains("urlset") || server.equals("HLS", ignoreCase = true)
+
+        val mediaItem = MediaItem.Builder()
+            .setUri(Uri.parse(videoUrl))
+            .setMimeType(if (isHls) MimeTypes.APPLICATION_M3U8 else MimeTypes.APPLICATION_MP4)
+            .build()
+
+        val dataSourceFactory: DataSource.Factory = if (videoUrl.startsWith("file:")) {
+            ZillaDataSource.Factory(this)
+        } else {
+            val httpFactory = DefaultHttpDataSource.Factory().apply {
+                setDefaultRequestProperties(headers)
+            }
+            DefaultDataSource.Factory(this, httpFactory)
+        }
+
+        val mediaSource = if (isHls) {
+            HlsMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem)
+        } else {
+            ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem)
+        }
+
+        player.setMediaSource(mediaSource)
+        player.prepare()
+        player.play()
     }
 
     private fun showLoading(show: Boolean) {
