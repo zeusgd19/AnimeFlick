@@ -153,7 +153,7 @@ fun RecentEpisodeItem(
     val label = "Ep" // Abreviado para el badge
     RecentEpisodeItemContent(
         item = RecentEpisodeUi(
-            coverUrl = "https://www3.animeflv.net/uploads/animes/covers/"+episode.cover.substring(episode.cover.indexOfLast { it == '/' } + 1, episode.cover.indexOfLast { it == '.' })+".jpg",
+            coverUrl = episode.cover,
             title = episode.title,
             number = episode.number
         ),

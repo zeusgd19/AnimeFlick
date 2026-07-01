@@ -8,11 +8,11 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 suspend fun getAiringAnimesGroupedByWeekday(): Map<String, List<AiringAnime>> = withContext(Dispatchers.IO) {
-    val baseUrl = "https://animeflv.ahmedrangel.com/api"
+    val baseUrl = "https://animeflick.com/api"
     val grouped = mutableMapOf<String, MutableList<AiringAnime>>()
 
     try {
-        val listUrl = URL("$baseUrl/list/animes-on-air")
+        val listUrl = URL("$baseUrl/anime-on-air")
         val listResponse = listUrl.readTextWithUserAgent()
         val animesArray = JSONObject(listResponse).getJSONArray("data")
 
