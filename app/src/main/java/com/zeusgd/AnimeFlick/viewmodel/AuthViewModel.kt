@@ -343,7 +343,6 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
                 Log.d("Favorites", "Favorito añadido correctamente")
             }.onFailure {
                 Log.e("Favorites", "Error al añadir favorito", it)
-                Toast.makeText(context, "Error al añadir favorito", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -358,7 +357,6 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
                 Log.d("Delete Favorites", "Favorito eliminado correctamente")
             }.onFailure {
                 Log.e("Delete Favorites", "Error al eliminar favorito", it)
-                Toast.makeText(context, "Error al eliminar favorito", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -375,7 +373,6 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
                 Log.d("Progress", "Anime añadido correctamente")
             }.onFailure {
                 Log.e("Progress", "Error al añadir progreso", it)
-                Toast.makeText(context, "Error al añadir progreso", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -392,7 +389,6 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
                 Log.d("Watched", "Episodio visto añadido correctamente")
             }.onFailure {
                 Log.e("Watched", "Error al añadir episodio visto", it)
-                Toast.makeText(context, "Error al marcar episodio como visto", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -407,7 +403,6 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
                 Log.d("Watched", "Episodio visto eliminado correctamente")
             }.onFailure {
                 Log.e("Watched", "Error al eliminar episodio visto", it)
-                Toast.makeText(context, "Error al quitar episodio visto", Toast.LENGTH_SHORT).show()
             }
         }
     }

@@ -463,9 +463,7 @@ fun MainAnimeScreen(
                 // Primera sync tras login
                 LaunchedEffect(isLoggedIn) {
                     if (isLoggedIn) {
-                        viewModel.syncAllLocalAnimesToRemote(authViewModel, context)
                         authViewModel.forceSync(context)
-                        viewModel.syncAllRemoteAnimesToLocal(authViewModel, context)
                     }
                 }
             },

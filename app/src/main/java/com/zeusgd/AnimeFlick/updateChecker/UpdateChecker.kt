@@ -46,6 +46,19 @@ fun getInstalledVersion(context: Context): String? {
     }
 }
 
+fun isVersionGreater(remote: String, local: String): Boolean {
+    val remoteParts = remote.split(".").mapNotNull { it.toIntOrNull() }
+    val localParts = local.split(".").mapNotNull { it.toIntOrNull() }
+    val length = maxOf(remoteParts.size, localParts.size)
+    for (i in 0 until length) {
+        val r = remoteParts.getOrElse(i) { 0 }
+        val l = localParts.getOrElse(i) { 0 }
+        if (r > l) return true
+        if (r < l) return false
+    }
+    return false
+}
+
 suspend fun getUpdatedInfo(): String {
     return updatedInfo
 }
@@ -63,10 +76,10 @@ suspend fun checkForUpdateFromGitHub(context: Context): String? {
 
         updatedInfo = release.body
 
-        val currentVersion = getInstalledVersion(context)
+        val currentVersion = getInstalledVersion(context) ?: "0.0.0"
         val remoteVersion = release.tag.removePrefix("v")
 
-        if (currentVersion != remoteVersion) {
+        if (isVersionGreater(remoteVersion, currentVersion)) {
             release.assets.firstOrNull { it.name.endsWith(".apk") }?.downloadUrl
         } else {
             null
