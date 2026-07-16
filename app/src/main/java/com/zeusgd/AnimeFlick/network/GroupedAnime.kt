@@ -4,35 +4,29 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
-import java.text.SimpleDateFormat
-import java.util.*
 
 suspend fun getAiringAnimesGroupedByWeekday(): Map<String, List<AiringAnime>> = withContext(Dispatchers.IO) {
-    val baseUrl = "https://animeflick.com/api"
-    val grouped = mutableMapOf<String, MutableList<AiringAnime>>()
-
     try {
-        val listUrl = URL("$baseUrl/anime-on-air")
-        val listResponse = listUrl.readTextWithUserAgent()
-        val animesArray = JSONObject(listResponse).getJSONArray("data")
+        val url = URL("https://animeflick.com/api/airing-animes")
+        val json = url.readTextWithUserAgent()
+        val root = JSONObject(json)
 
-        for (i in 0 until animesArray.length()) {
-            val anime = animesArray.getJSONObject(i)
-            val slug = anime.getString("slug")
-            val title = anime.getString("title")
-
-            val infoUrl = URL("$baseUrl/anime/$slug")
-            val infoResponse = infoUrl.readTextWithUserAgent()
-            val infoData = JSONObject(infoResponse).getJSONObject("data")
-
-            val airingDate = infoData.optString("next_airing_episode", null)
-            val cover = infoData.optString("cover", "")
-
-            if (!airingDate.isNullOrEmpty()) {
-                val weekday = getWeekdayFromDate(airingDate)
-                val list = grouped.getOrPut(weekday) { mutableListOf() }
-                list.add(AiringAnime(title, slug, airingDate, cover))
+        val grouped = mutableMapOf<String, List<AiringAnime>>()
+        root.keys().forEach { day ->
+            val array = root.getJSONArray(day)
+            val list = mutableListOf<AiringAnime>()
+            for (i in 0 until array.length()) {
+                val obj = array.getJSONObject(i)
+                list.add(
+                    AiringAnime(
+                        title = obj.getString("title"),
+                        slug = obj.getString("slug"),
+                        airingData = obj.optString("airingData", "On Air"),
+                        cover = obj.optString("cover", "")
+                    )
+                )
             }
+            grouped[day] = list
         }
 
         return@withContext grouped
@@ -46,14 +40,4 @@ fun URL.readTextWithUserAgent(): String {
     val conn = this.openConnection() as HttpURLConnection
     conn.setRequestProperty("User-Agent", "Mozilla/5.0")
     return conn.inputStream.bufferedReader().use { it.readText() }
-}
-
-fun getWeekdayFromDate(dateStr: String): String {
-    return try {
-        val format = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-        val date = format.parse(dateStr)
-        SimpleDateFormat("EEEE", Locale("es", "ES")).format(date ?: Date())
-    } catch (e: Exception) {
-        "Desconocido"
-    }
 }
